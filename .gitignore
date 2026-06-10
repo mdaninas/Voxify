@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.env
+data/
+storage/
+*.sqlite
+CLAUDE..md
+.CLAUDE.md
+CLAUDE.md
+.claude/
+prd_voice_cloning_mvp_fase_1.md
