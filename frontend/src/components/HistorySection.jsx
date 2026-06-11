@@ -1,17 +1,82 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { deleteAudio } from "../utils/api.js";
+
+const FILL_COLORS = ["#f4458e", "#5b3df5", "#ffb43a", "#00a87e"];
+const PASTEL_SHADOWS = ["#d8ccf8", "#fbc7dd", "#b8f0d8", "#ffe2b0"];
 
 function truncate(value, max = 120) {
   return value.length > max ? value.slice(0, max) + "…" : value;
 }
 
+function formatHistoryDate(value) {
+  return new Date(value).toLocaleString("id-ID", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function formatTime(totalSeconds) {
+  const s = Math.floor(totalSeconds || 0);
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
+
 export default function HistorySection({ audios, onAudiosChanged }) {
   const [deletingId, setDeletingId] = useState("");
   const [error, setError] = useState("");
+  const [playingId, setPlayingId] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [durations, setDurations] = useState({});
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+    };
+  }, []);
+
+  function stopPlayback() {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setPlayingId("");
+    setProgress(0);
+    setElapsed(0);
+  }
+
+  function togglePlay(item) {
+    if (playingId === item.id) {
+      stopPlayback();
+      return;
+    }
+    audioRef.current?.pause();
+    const audio = new Audio(item.audio_url);
+    audio.onloadedmetadata = () => {
+      setDurations((prev) => ({ ...prev, [item.id]: audio.duration }));
+    };
+    audio.ontimeupdate = () => {
+      setElapsed(audio.currentTime);
+      setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
+    };
+    audio.onended = () => stopPlayback();
+    audio.onerror = () => {
+      stopPlayback();
+      setError("File audio gagal dimuat.");
+    };
+    audioRef.current = audio;
+    setPlayingId(item.id);
+    setProgress(0);
+    setElapsed(0);
+    audio.play().catch(() => stopPlayback());
+  }
 
   async function handleDelete(audioId) {
     if (!window.confirm("Hapus audio ini dari history?")) {
       return;
+    }
+    if (playingId === audioId) {
+      stopPlayback();
     }
     setDeletingId(audioId);
     setError("");
@@ -26,36 +91,45 @@ export default function HistorySection({ audios, onAudiosChanged }) {
   }
 
   return (
-    <section className="section">
-      <div className="section-header">
-        <span className="step-number">3</span>
-        <h2>History Audio</h2>
+    <section className="step spaced">
+      <div className="step-header">
+        <div className="step-badge green">03</div>
+        <div className="step-title">History audio</div>
+        <div className="step-line green" />
+        {audios.length > 0 && <div className="history-pill">{audios.length} audio</div>}
       </div>
-      <div className="section-body">
-        {error && <div className="alert">{error}</div>}
-        {audios.length === 0 ? (
-          <div className="empty-state">
-            Belum ada audio yang dihasilkan. Hasil generate akan muncul di sini.
-          </div>
-        ) : (
-          <div className="list">
-            {audios.map((audio) => (
-              <div className="history-item" key={audio.id}>
-                <div className="history-top">
-                  <div>
-                    <span className="title">{audio.voice_name || "Voice terhapus"}</span>{" "}
-                    <span className="meta">
-                      · {new Date(audio.created_at).toLocaleString("id-ID")} ·{" "}
-                      {audio.character_count} karakter
+
+      {error && <div className="error-box">{error}</div>}
+
+      {audios.length === 0 ? (
+        <div className="empty-dashed">
+          Belum ada audio yang dihasilkan. Hasil generate akan muncul di sini.
+        </div>
+      ) : (
+        <div className="history-list">
+          {audios.map((audio, index) => {
+            const playing = playingId === audio.id;
+            return (
+              <div
+                className="history-card"
+                key={audio.id}
+                style={{ boxShadow: `4px 4px 0 ${PASTEL_SHADOWS[index % PASTEL_SHADOWS.length]}` }}
+              >
+                <div className="history-meta-row">
+                  <div className="history-meta">
+                    <strong>{audio.voice_name || "Voice terhapus"}</strong>
+                    <span className="muted">
+                      {" "}
+                      · {formatHistoryDate(audio.created_at)} · {audio.character_count} karakter
                     </span>
                   </div>
-                  <div className="btn-row" style={{ marginTop: 0 }}>
-                    <a className="btn small" href={audio.download_url}>
-                      Download
+                  <div className="history-actions">
+                    <a className="mini-btn download" href={audio.download_url}>
+                      ⬇ Download
                     </a>
                     <button
                       type="button"
-                      className="btn small"
+                      className="mini-btn danger"
                       disabled={deletingId === audio.id}
                       onClick={() => handleDelete(audio.id)}
                     >
@@ -63,13 +137,33 @@ export default function HistorySection({ audios, onAudiosChanged }) {
                     </button>
                   </div>
                 </div>
-                <p className="history-text">"{truncate(audio.text)}"</p>
-                <audio controls preload="none" src={audio.audio_url} />
+                <div className="history-quote">"{truncate(audio.text)}"</div>
+                <div className={`player ${playing ? "playing" : ""}`}>
+                  <button
+                    type="button"
+                    className={`player-btn ${playing ? "playing" : ""}`}
+                    onClick={() => togglePlay(audio)}
+                  >
+                    {playing ? "❚❚" : "▶"}
+                  </button>
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{
+                        width: `${playing ? Math.round(progress * 100) : 0}%`,
+                        background: FILL_COLORS[index % FILL_COLORS.length]
+                      }}
+                    />
+                  </div>
+                  <div className="player-time">
+                    {formatTime(playing ? elapsed : durations[audio.id])}
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

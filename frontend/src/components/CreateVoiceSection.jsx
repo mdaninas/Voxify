@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import VoiceRecorder from "./VoiceRecorder.jsx";
 import { createVoice, deleteVoice } from "../utils/api.js";
 
@@ -8,9 +8,24 @@ const CONSENT_LABEL =
 const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".m4a", ".webm"];
 const MAX_UPLOAD_MB = 25;
 
+const AVATAR_COLORS = ["#5b3df5", "#f4458e", "#00a87e", "#ffb43a"];
+const PASTEL_SHADOWS = ["#d8ccf8", "#fbc7dd", "#b8f0d8", "#ffe2b0"];
+
+function formatFileSize(bytes) {
+  const mb = bytes / (1024 * 1024);
+  return mb.toLocaleString("id-ID", { maximumFractionDigits: 1 }) + " MB";
+}
+
+function formatVoiceDate(value) {
+  return new Date(value).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  });
+}
+
 export default function CreateVoiceSection({ voices, onVoicesChanged }) {
   const [tab, setTab] = useState("record");
-  const [playingVoiceId, setPlayingVoiceId] = useState("");
   const [uploadFile, setUploadFile] = useState(null);
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [voiceName, setVoiceName] = useState("");
@@ -19,7 +34,15 @@ export default function CreateVoiceSection({ voices, onVoicesChanged }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [deletingId, setDeletingId] = useState("");
+  const [playingVoiceId, setPlayingVoiceId] = useState("");
   const fileInputRef = useRef(null);
+  const previewAudioRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      previewAudioRef.current?.pause();
+    };
+  }, []);
 
   function handleFileChange(event) {
     setError("");
@@ -55,6 +78,7 @@ export default function CreateVoiceSection({ voices, onVoicesChanged }) {
   const canSubmit = audioReady && voiceName.trim().length > 0 && consent && !submitting;
 
   async function handleSubmit() {
+    if (!canSubmit) return;
     setError("");
     setSuccess("");
     setSubmitting(true);
@@ -70,7 +94,7 @@ export default function CreateVoiceSection({ voices, onVoicesChanged }) {
         sourceType: tab
       });
       setSuccess(
-        `Voice clone "${result.data.name}" berhasil dibuat. Klik tombol Play di daftar bawah untuk mendengar hasilnya.`
+        `Voice clone "${result.data.name}" berhasil dibuat. Klik avatarnya di daftar bawah untuk mendengar sampel.`
       );
       setVoiceName("");
       setConsent(false);
@@ -87,9 +111,35 @@ export default function CreateVoiceSection({ voices, onVoicesChanged }) {
     }
   }
 
+  function stopPreview() {
+    previewAudioRef.current?.pause();
+    previewAudioRef.current = null;
+    setPlayingVoiceId("");
+  }
+
+  function togglePreview(voice) {
+    if (playingVoiceId === voice.id) {
+      stopPreview();
+      return;
+    }
+    previewAudioRef.current?.pause();
+    const audio = new Audio(voice.preview_url);
+    audio.onended = () => setPlayingVoiceId("");
+    audio.onerror = () => {
+      setPlayingVoiceId("");
+      setError("Preview suara gagal dimuat.");
+    };
+    previewAudioRef.current = audio;
+    setPlayingVoiceId(voice.id);
+    audio.play().catch(() => setPlayingVoiceId(""));
+  }
+
   async function handleDeleteVoice(voiceId, name) {
     if (!window.confirm(`Hapus voice "${name}" beserta seluruh audio hasil generate-nya?`)) {
       return;
+    }
+    if (playingVoiceId === voiceId) {
+      stopPreview();
     }
     setDeletingId(voiceId);
     setError("");
@@ -104,57 +154,71 @@ export default function CreateVoiceSection({ voices, onVoicesChanged }) {
   }
 
   return (
-    <section className="section">
-      <div className="section-header">
-        <span className="step-number">1</span>
-        <h2>Buat Voice Clone</h2>
+    <section className="step">
+      <div className="step-header">
+        <div className="step-badge purple">01</div>
+        <div className="step-title">Buat voice clone</div>
+        <div className="step-line purple" />
       </div>
-      <div className="section-body">
-        <div className="tabs">
+
+      <div className="card shadow-purple">
+        <div className="tab-switcher">
           <button
             type="button"
-            className={`tab ${tab === "record" ? "active" : ""}`}
+            className={`tab-btn ${tab === "record" ? "active" : ""}`}
             onClick={() => setTab("record")}
           >
-            Record Voice
+            🎙 Rekam langsung
           </button>
           <button
             type="button"
-            className={`tab ${tab === "upload" ? "active" : ""}`}
+            className={`tab-btn ${tab === "upload" ? "active" : ""}`}
             onClick={() => setTab("upload")}
           >
-            Upload Audio
+            📁 Unggah audio
           </button>
         </div>
 
         {tab === "record" ? (
           <VoiceRecorder recordedBlob={recordedBlob} onRecorded={setRecordedBlob} />
         ) : (
-          <div className="field">
-            <span className="field-label">File Audio</span>
-            <label className="dropzone">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".mp3,.wav,.m4a,.webm,audio/*"
-                onChange={handleFileChange}
-              />
-              <div>Klik untuk memilih file audio</div>
-              <div className="hint">Format: .mp3 / .wav / .m4a / .webm - maks. {MAX_UPLOAD_MB} MB</div>
-              {uploadFile && <div className="file-name">{uploadFile.name}</div>}
-            </label>
-            <p className="hint">
-              Durasi minimal 10 detik, satu pembicara, tanpa musik latar keras.
-            </p>
-          </div>
+          <label className={`dropzone ${uploadFile ? "has-file" : ""}`}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".mp3,.wav,.m4a,.webm,audio/*"
+              onChange={handleFileChange}
+            />
+            {uploadFile ? (
+              <div className="file-chip">
+                <div className="file-icon">♪</div>
+                <div className="file-info">
+                  <div className="file-name">{uploadFile.name}</div>
+                  <div className="drop-meta">
+                    {formatFileSize(uploadFile.size)} · klik untuk mengganti
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="drop-title">
+                  Klik untuk <span className="drop-link">memilih file audio</span>
+                </div>
+                <div className="drop-meta">
+                  .mp3 / .wav / .m4a / .webm · maks {MAX_UPLOAD_MB} MB · minimal 10 detik
+                </div>
+              </>
+            )}
+          </label>
         )}
 
         <div className="field">
           <label className="field-label" htmlFor="voice-name">
-            Nama Voice
+            Nama voice
           </label>
           <input
             id="voice-name"
+            className="text-input"
             type="text"
             placeholder="contoh: Suara Saya"
             value={voiceName}
@@ -162,76 +226,65 @@ export default function CreateVoiceSection({ voices, onVoicesChanged }) {
           />
         </div>
 
-        <div className="field">
-          <label className="consent-box">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(event) => setConsent(event.target.checked)}
-            />
-            <span>{CONSENT_LABEL}</span>
-          </label>
-        </div>
+        <label className="consent-row">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(event) => setConsent(event.target.checked)}
+          />
+          <div className={`consent-box ${consent ? "checked" : ""}`}>{consent ? "✓" : ""}</div>
+          <div className="consent-text">{CONSENT_LABEL}</div>
+        </label>
 
-        <div className="btn-row">
-          <button type="button" className="btn primary" disabled={!canSubmit} onClick={handleSubmit}>
-            {submitting ? "Membuat Voice Clone…" : "Create Voice Clone"}
-          </button>
-          {submitting && <span className="loading-note">Mengirim audio ke server…</span>}
-        </div>
+        <button type="button" className="cta purple" disabled={!canSubmit} onClick={handleSubmit}>
+          {submitting ? "Membuat voice clone…" : "✨ Create voice clone"}
+        </button>
 
-        {error && <div className="alert">{error}</div>}
-        {success && <div className="alert success">{success}</div>}
-
-        <div className="field">
-          <span className="field-label">Voice Clone Tersimpan</span>
-          {voices.length === 0 ? (
-            <div className="empty-state">Belum ada voice clone. Buat voice pertama kamu di atas.</div>
-          ) : (
-            <div className="list">
-              {voices.map((voice) => (
-                <div className="list-item" key={voice.id}>
-                  <div className="list-row">
-                    <div>
-                      <div className="title">{voice.name}</div>
-                      <div className="meta">
-                        {voice.source_type === "record" ? "Rekaman browser" : "Upload file"} ·{" "}
-                        {new Date(voice.created_at).toLocaleString("id-ID")}
-                      </div>
-                    </div>
-                    <div className="btn-row" style={{ marginTop: 0 }}>
-                      {voice.preview_url && (
-                        <button
-                          type="button"
-                          className="btn small"
-                          onClick={() =>
-                            setPlayingVoiceId(playingVoiceId === voice.id ? "" : voice.id)
-                          }
-                        >
-                          {playingVoiceId === voice.id ? "Tutup" : "▶ Play"}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="btn small"
-                        disabled={deletingId === voice.id}
-                        onClick={() => handleDeleteVoice(voice.id, voice.name)}
-                      >
-                        {deletingId === voice.id ? "Menghapus…" : "Hapus"}
-                      </button>
-                    </div>
-                  </div>
-                  {playingVoiceId === voice.id && voice.preview_url && (
-                    <div className="preview-player">
-                      <audio controls autoPlay src={voice.preview_url} />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {error && <div className="error-box">{error}</div>}
+        {success && <div className="success-box">✓ {success}</div>}
       </div>
+
+      {voices.length > 0 && (
+        <div className="voice-list">
+          <div className="mini-label">VOICE CLONE TERSIMPAN</div>
+          {voices.map((voice, index) => {
+            const playing = playingVoiceId === voice.id;
+            return (
+              <div
+                className="voice-card"
+                key={voice.id}
+                style={{ boxShadow: `4px 4px 0 ${PASTEL_SHADOWS[index % PASTEL_SHADOWS.length]}` }}
+              >
+                <button
+                  type="button"
+                  className={`avatar-btn ${playing ? "playing" : ""}`}
+                  style={{ background: AVATAR_COLORS[index % AVATAR_COLORS.length] }}
+                  disabled={!voice.preview_url}
+                  onClick={() => togglePreview(voice)}
+                  title={voice.preview_url ? "Putar sampel suara" : "Preview tidak tersedia"}
+                >
+                  {playing ? "❚❚" : voice.name.charAt(0).toUpperCase()}
+                </button>
+                <div className="voice-info">
+                  <div className="voice-name">{voice.name}</div>
+                  <div className="voice-meta">
+                    {voice.source_type === "record" ? "Rekaman browser" : "Upload file"} ·{" "}
+                    {formatVoiceDate(voice.created_at)}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="chip-btn"
+                  disabled={deletingId === voice.id}
+                  onClick={() => handleDeleteVoice(voice.id, voice.name)}
+                >
+                  {deletingId === voice.id ? "Menghapus…" : "Hapus"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

@@ -1,7 +1,17 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { generateSpeech } from "../utils/api.js";
 
 const MAX_TEXT_LENGTH = 1000;
+
+const WAVE_HEIGHTS = [
+  10, 22, 14, 30, 18, 34, 24, 12, 28, 20, 36, 16, 26, 32, 14, 22, 30, 18, 12, 28, 34, 20, 24, 14
+];
+const WAVE_COLORS = ["#f4458e", "#5b3df5", "#ffb43a", "#00a87e"];
+
+function formatTime(totalSeconds) {
+  const s = Math.floor(totalSeconds || 0);
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
 
 export default function GenerateSection({ voices, onGenerated }) {
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
@@ -9,17 +19,52 @@ export default function GenerateSection({ voices, onGenerated }) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef(null);
 
-  const overLimit = text.length > MAX_TEXT_LENGTH;
-  const canGenerate =
-    selectedVoiceId && text.trim().length > 0 && !overLimit && !generating;
+  const hasVoices = voices.length > 0;
+
+  useEffect(() => {
+    if (!hasVoices) {
+      setSelectedVoiceId("");
+      return;
+    }
+    if (!voices.some((voice) => voice.id === selectedVoiceId)) {
+      setSelectedVoiceId(voices[0].id);
+    }
+  }, [voices, hasVoices, selectedVoiceId]);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+    };
+  }, []);
+
+  const selectedVoice = voices.find((voice) => voice.id === selectedVoiceId) || null;
+  const charCount = text.length;
+  const canGenerate = Boolean(selectedVoice) && text.trim().length > 0 && !generating;
+
+  function resetPlayer() {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setPlaying(false);
+    setProgress(0);
+    setElapsed(0);
+    setDuration(0);
+  }
 
   async function handleGenerate() {
+    if (!canGenerate) return;
     setError("");
     setGenerating(true);
+    resetPlayer();
     try {
       const response = await generateSpeech({ voiceId: selectedVoiceId, text });
       setResult(response.data);
+      setText("");
       await onGenerated();
     } catch (err) {
       setError(err.message);
@@ -28,31 +73,72 @@ export default function GenerateSection({ voices, onGenerated }) {
     }
   }
 
+  function togglePlay() {
+    if (!result) return;
+    if (playing) {
+      audioRef.current?.pause();
+      setPlaying(false);
+      return;
+    }
+    if (!audioRef.current) {
+      const audio = new Audio(result.audio_url);
+      audio.onloadedmetadata = () => setDuration(audio.duration);
+      audio.ontimeupdate = () => {
+        setElapsed(audio.currentTime);
+        setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
+      };
+      audio.onended = () => {
+        setPlaying(false);
+        setProgress(0);
+        setElapsed(0);
+      };
+      audio.onerror = () => {
+        setPlaying(false);
+        setError("File audio gagal dimuat. Coba generate ulang.");
+      };
+      audioRef.current = audio;
+    }
+    setPlaying(true);
+    audioRef.current.play().catch(() => setPlaying(false));
+  }
+
+  const coloredBars = playing ? Math.max(1, Math.round(progress * WAVE_HEIGHTS.length)) : 0;
+
   return (
-    <section className="section">
-      <div className="section-header">
-        <span className="step-number">2</span>
-        <h2>Generate Speech</h2>
+    <section
+      className="step spaced"
+      style={{ opacity: hasVoices ? 1 : 0.5, transition: "opacity 0.3s" }}
+    >
+      <div className="step-header">
+        <div className="step-badge pink">02</div>
+        <div className="step-title">Generate speech</div>
+        <div className="step-line pink" />
       </div>
-      <div className="section-body">
+
+      <div className="card shadow-pink gap-16">
         <div className="field">
           <label className="field-label" htmlFor="voice-select">
-            Pilih Voice
+            Pilih voice
           </label>
           <select
             id="voice-select"
+            className="select-input"
             value={selectedVoiceId}
+            disabled={!hasVoices}
             onChange={(event) => setSelectedVoiceId(event.target.value)}
           >
-            <option value="">-- pilih voice clone --</option>
-            {voices.map((voice) => (
-              <option key={voice.id} value={voice.id}>
-                {voice.name}
-              </option>
-            ))}
+            {hasVoices ? (
+              voices.map((voice) => (
+                <option key={voice.id} value={voice.id}>
+                  {voice.name}
+                </option>
+              ))
+            ) : (
+              <option value="">-- pilih voice clone --</option>
+            )}
           </select>
-          {voices.length === 0 && (
-            <p className="hint">Belum ada voice. Buat voice clone dulu di Langkah 1.</p>
+          {!hasVoices && (
+            <div className="gen-hint">Belum ada voice. Buat voice clone dulu di langkah 01.</div>
           )}
         </div>
 
@@ -62,43 +148,67 @@ export default function GenerateSection({ voices, onGenerated }) {
           </label>
           <textarea
             id="speech-text"
+            className="textarea-input"
+            rows={5}
             placeholder="Ketik teks yang ingin dibacakan oleh suara kamu…"
             value={text}
-            onChange={(event) => setText(event.target.value)}
+            disabled={!hasVoices}
+            onChange={(event) => setText(event.target.value.slice(0, MAX_TEXT_LENGTH))}
           />
-          <div className={`char-counter ${overLimit ? "over" : ""}`}>
-            {text.length} / {MAX_TEXT_LENGTH} karakter
+        </div>
+
+        <div className="gen-row">
+          <div className={`char-counter ${charCount > 900 ? "warn" : ""}`}>
+            {charCount} / {MAX_TEXT_LENGTH} karakter
           </div>
-          {overLimit && (
-            <div className="alert">Teks melebihi batas maksimal {MAX_TEXT_LENGTH} karakter.</div>
-          )}
-        </div>
-
-        <div className="btn-row">
-          <button
-            type="button"
-            className="btn primary"
-            disabled={!canGenerate}
-            onClick={handleGenerate}
-          >
-            {generating ? "Menghasilkan Audio…" : "Generate Audio"}
+          <button type="button" className="cta pink" disabled={!canGenerate} onClick={handleGenerate}>
+            {generating ? "Menghasilkan…" : "⚡ Generate audio"}
           </button>
-          {generating && <span className="loading-note">Memproses teks menjadi suara…</span>}
         </div>
 
-        {error && <div className="alert">{error}</div>}
+        {error && <div className="error-box">{error}</div>}
 
-        {result && (
-          <div className="result-box">
-            <span className="result-label">Hasil Terakhir - {result.voice_name}</span>
-            <audio
-              controls
-              src={result.audio_url}
-              onError={() => setError("File audio gagal dimuat. Coba generate ulang.")}
-            />
-            <div className="btn-row">
-              <a className="btn small" href={result.download_url}>
-                Download {String(result.output_format || "mp3").toUpperCase()}
+        {generating && (
+          <div className="gen-status">
+            <div className="eq">
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+            <div className="gen-status-text">
+              Memproses teks menjadi suara dengan <strong>{selectedVoice?.name}</strong>…
+            </div>
+          </div>
+        )}
+
+        {result && !generating && (
+          <div className="latest-card">
+            <div className="latest-label">Hasil terakhir · {result.voice_name}</div>
+            <div className="latest-row">
+              <button type="button" className="latest-play" onClick={togglePlay}>
+                {playing ? "❚❚" : "▶"}
+              </button>
+              <div className="waveform">
+                {WAVE_HEIGHTS.map((height, index) => (
+                  <span
+                    key={index}
+                    style={{
+                      height: `${height}px`,
+                      background:
+                        index < coloredBars ? WAVE_COLORS[index % WAVE_COLORS.length] : "#5a5378"
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="latest-time">{formatTime(playing ? elapsed : duration)}</div>
+            </div>
+            <div className="latest-bottom">
+              <div className="latest-quote">
+                "{result.text.length > 70 ? result.text.slice(0, 70) + "…" : result.text}"
+              </div>
+              <a className="download-btn" href={result.download_url}>
+                ⬇ Download {String(result.output_format || "mp3").toUpperCase()}
               </a>
             </div>
           </div>

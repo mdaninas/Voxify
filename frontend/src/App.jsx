@@ -40,42 +40,58 @@ export default function App() {
 
   return (
     <div className="page">
-      <header className="app-header">
-        <div>
-          <h1>Voxify - Voice Cloning MVP</h1>
-          <p>Clone suaramu, ketik teks, dan hasilkan audio dengan suaramu sendiri.</p>
+      <header className="top-bar">
+        <div className="logo-row">
+          <div className="logo-box">
+            <div className="logo-bars">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+          <div className="wordmark">Voxify</div>
         </div>
         {health &&
           (health.demo_mode ? (
-            <span className="badge demo">Demo Mode Active</span>
+            <div className="mode-pill">Demo Mode</div>
           ) : (
-            <span className="badge live">Live AI Mode</span>
+            <div className="mode-pill live">Live AI</div>
           ))}
       </header>
 
-      <div className="disclaimer">{DISCLAIMER}</div>
+      <section className="hero">
+        <h1>
+          Suaramu, untuk teks apa pun. <span className="accent-purple">Dalam</span>{" "}
+          <span className="accent-pink">hitungan</span> <span className="accent-green">detik.</span>
+        </h1>
+        <p>Clone suaramu, ketik teks, dan dengarkan hasilnya. Semuanya di satu halaman.</p>
+      </section>
 
       {health?.demo_mode && (
-        <div className="demo-warning">
-          <strong>Demo Mode aktif.</strong> Hasil audio hanya berupa nada placeholder, bukan suara
-          clone asli. Untuk hasil suara sungguhan, isi <code>ELEVENLABS_API_KEY</code> di{" "}
-          <code>backend/.env</code>, ubah <code>DEMO_MODE=false</code>, lalu restart backend.
+        <div className="demo-banner">
+          <strong>⚡ Demo Mode aktif.</strong> Hasil audio hanya nada placeholder, bukan suara
+          clone asli. Isi <span className="env-chip">ELEVENLABS_API_KEY</span> di backend untuk
+          hasil sungguhan.
         </div>
       )}
 
-      {backendError && <div className="alert">{backendError}</div>}
+      {backendError && <div className="error-box">{backendError}</div>}
 
-      <CreateVoiceSection voices={voices} onVoicesChanged={async () => {
-        await refreshVoices();
-        await refreshAudios();
-      }} />
+      <CreateVoiceSection
+        voices={voices}
+        onVoicesChanged={async () => {
+          await refreshVoices();
+          await refreshAudios();
+        }}
+      />
 
       <GenerateSection voices={voices} onGenerated={refreshAudios} />
 
       <HistorySection audios={audios} onAudiosChanged={refreshAudios} />
 
-      <footer className="app-footer">
-        Voxify - MVP Fase 1 · Voice cloning ditenagai ElevenLabs API
+      <footer className="footer">
+        <div className="footer-disclaimer">{DISCLAIMER}</div>
+        <div className="footer-brand">Voxify - MVP Fase 1 · Voice cloning ditenagai ElevenLabs API</div>
       </footer>
     </div>
   );
