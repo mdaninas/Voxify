@@ -6,11 +6,10 @@ import config, { isLiveProviderReady } from "../config.js";
 import { getDb, logEvent } from "../database/db.js";
 import { AppError, errorResponse } from "../utils/errors.js";
 import { createInstantVoiceClone, deleteProviderVoice, textToSpeech } from "../services/elevenLabsService.js";
-import { generateDemoWav } from "../utils/demoAudio.js";
+import { generateDemoMp3 } from "../utils/demoAudio.js";
+import { validateUploadedAudio } from "../utils/audioValidation.js";
 
 const router = Router();
-
-const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".m4a", ".webm"];
 
 const PREVIEW_TEXT = "Halo, ini adalah hasil clone suara kamu. Suara ini siap dipakai untuk membaca teks.";
 
@@ -24,8 +23,8 @@ async function generateVoicePreview(voiceId, providerVoiceId) {
     let buffer;
     let ext;
     if (config.demoMode) {
-      buffer = generateDemoWav(PREVIEW_TEXT, 5);
-      ext = ".wav";
+      buffer = generateDemoMp3(PREVIEW_TEXT, 5);
+      ext = ".mp3";
     } else {
       buffer = await textToSpeech(providerVoiceId, PREVIEW_TEXT);
       ext = ".mp3";
@@ -77,17 +76,8 @@ router.post("/", uploadMiddleware, async (req, res) => {
     if (!file) {
       throw new AppError("VALIDATION_ERROR", "File audio wajib diunggah.");
     }
-    if (file.size === 0) {
-      throw new AppError("VALIDATION_ERROR", "File audio kosong.");
-    }
-
-    const ext = path.extname(file.originalname || "").toLowerCase();
-    if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      throw new AppError(
-        "UNSUPPORTED_FILE_TYPE",
-        `Format file tidak didukung. Gunakan: ${ALLOWED_EXTENSIONS.join(", ")}.`
-      );
-    }
+    const audioInfo = await validateUploadedAudio(file);
+    const ext = audioInfo.extension;
     if (!name) {
       throw new AppError("VALIDATION_ERROR", "Nama voice wajib diisi.");
     }
@@ -149,7 +139,12 @@ router.post("/", uploadMiddleware, async (req, res) => {
         previewPath
       );
 
-    logEvent("voice_created", `Voice clone dibuat: ${name}`, { voiceId, demoMode: config.demoMode });
+    logEvent("voice_created", `Voice clone dibuat: ${name}`, {
+      voiceId,
+      demoMode: config.demoMode,
+      detectedMime: audioInfo.detectedMime,
+      durationSeconds: audioInfo.durationSeconds
+    });
 
     res.status(201).json({
       success: true,

@@ -96,6 +96,17 @@ npm run dev
 
 Frontend berjalan di `http://localhost:5173` dan otomatis mem-proxy request `/api/*` ke backend port 8000.
 
+### Test Otomatis
+
+```bash
+cd backend
+npm test
+
+cd ../frontend
+npm test
+npm run build
+```
+
 ## Environment Variables
 
 Semua konfigurasi backend ada di `backend/.env` (salin dari `.env.example`):
@@ -107,7 +118,13 @@ Semua konfigurasi backend ada di `backend/.env` (salin dari `.env.example`):
 | `DATABASE_PATH` | `./data/app.sqlite` | Lokasi file SQLite |
 | `STORAGE_DIR` | `./storage` | Folder penyimpanan audio |
 | `MAX_UPLOAD_MB` | `25` | Batas ukuran file sampel |
+| `MIN_SAMPLE_SECONDS` | `10` | Durasi minimal sampel audio yang diterima backend |
 | `MAX_TEXT_LENGTH` | `1000` | Batas karakter teks per generate |
+| `JSON_BODY_LIMIT` | `128kb` | Batas ukuran body JSON |
+| `CORS_ORIGIN` | `http://localhost:5173,http://127.0.0.1:5173` | Origin frontend yang boleh mengakses backend |
+| `RATE_LIMIT_WINDOW_MS` | `900000` | Jendela rate limit API dalam milidetik |
+| `RATE_LIMIT_MAX` | `120` | Maksimal request API per jendela |
+| `GENERATION_RATE_LIMIT_MAX` | `20` | Maksimal request proses audio per jendela |
 | `ELEVENLABS_API_KEY` | (kosong) | API key ElevenLabs, wajib untuk Live Mode |
 | `ELEVENLABS_TTS_MODEL` | `eleven_multilingual_v2` | Model TTS (mendukung Bahasa Indonesia) |
 | `ELEVENLABS_OUTPUT_FORMAT` | `mp3_44100_128` | Format output ElevenLabs |
@@ -131,8 +148,8 @@ Jangan commit file `.env`. Hanya `.env.example` yang masuk repository.
 |---|---|---|
 | Syarat | `DEMO_MODE=true` | `DEMO_MODE=false` + API key ElevenLabs valid |
 | Voice clone | Membuat `provider_voice_id` palsu (`demo_voice_xxx`), tidak memanggil ElevenLabs | Memanggil ElevenLabs Create IVC Voice API |
-| Preview suara | File WAV placeholder 5 detik (nada) | MP3 ±5 detik dengan suara hasil clone |
-| Generate audio | Menghasilkan file audio placeholder (nada WAV) | Memanggil ElevenLabs TTS, hasil MP3 dengan suara clone |
+| Preview suara | File MP3 placeholder 5 detik (nada) | MP3 ±5 detik dengan suara hasil clone |
+| Generate audio | Menghasilkan file MP3 placeholder (nada) | Memanggil ElevenLabs TTS, hasil MP3 dengan suara clone |
 | Kegunaan | Demo alur aplikasi tanpa kuota/API key | Hasil suara asli |
 
 Saat Demo Mode aktif, UI menampilkan badge **Demo Mode Active**.
@@ -170,9 +187,10 @@ Kode error: `VALIDATION_ERROR`, `FILE_TOO_LARGE`, `UNSUPPORTED_FILE_TYPE`, `CONS
 
 - User wajib mencentang pernyataan bahwa suara yang digunakan adalah miliknya sendiri atau sudah mendapat izin resmi. Consent divalidasi ulang di backend dan disimpan dengan timestamp.
 - API key ElevenLabs hanya berada di backend (`.env`) dan tidak pernah dikirim ke browser.
-- File upload dibatasi format dan ukurannya, disimpan dengan nama UUID, dan tidak pernah dieksekusi.
+- File upload dibatasi format, ukuran, MIME asli, dan durasi minimal, disimpan dengan nama UUID, dan tidak pernah dieksekusi.
 - Folder storage tidak diekspos langsung; file audio hanya bisa diakses lewat endpoint backend.
 - Disclaimer penyalahgunaan ditampilkan di UI: aplikasi hanya boleh digunakan dengan suara milik sendiri atau yang sudah diizinkan, bukan untuk penipuan atau peniruan tanpa izin.
+- Backend memakai security headers, origin whitelist, batas body JSON, dan rate limit dasar untuk endpoint API/proses audio.
 
 ## Screenshot
 

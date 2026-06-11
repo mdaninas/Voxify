@@ -10,6 +10,7 @@ router.get("/", (req, res) => {
     demo_mode: config.demoMode,
     provider_configured: isLiveProviderReady(),
     max_upload_mb: config.maxUploadMb,
+    min_sample_seconds: config.minSampleSeconds,
     max_text_length: config.maxTextLength
   });
 });

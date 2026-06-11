@@ -5,7 +5,7 @@ import config, { isLiveProviderReady } from "../config.js";
 import { getDb, logEvent } from "../database/db.js";
 import { AppError, errorResponse } from "../utils/errors.js";
 import { textToSpeech } from "../services/elevenLabsService.js";
-import { generateDemoWav } from "../utils/demoAudio.js";
+import { generateDemoMp3 } from "../utils/demoAudio.js";
 
 const router = Router();
 
@@ -44,8 +44,8 @@ router.post("/generate", async (req, res) => {
     let outputFormat;
 
     if (config.demoMode) {
-      audioBuffer = generateDemoWav(text);
-      outputFormat = "wav";
+      audioBuffer = generateDemoMp3(text);
+      outputFormat = "mp3";
     } else {
       audioBuffer = await textToSpeech(voice.provider_voice_id, text);
       outputFormat = "mp3";

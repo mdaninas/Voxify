@@ -12,7 +12,16 @@ const config = {
   databasePath: path.resolve(rootDir, process.env.DATABASE_PATH || "./data/app.sqlite"),
   storageDir: path.resolve(rootDir, process.env.STORAGE_DIR || "./storage"),
   maxUploadMb: Number(process.env.MAX_UPLOAD_MB || 25),
+  minSampleSeconds: Number(process.env.MIN_SAMPLE_SECONDS || 10),
   maxTextLength: Number(process.env.MAX_TEXT_LENGTH || 1000),
+  jsonBodyLimit: process.env.JSON_BODY_LIMIT || "128kb",
+  corsOrigins: (process.env.CORS_ORIGIN || "http://localhost:5173,http://127.0.0.1:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+  rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000),
+  rateLimitMax: Number(process.env.RATE_LIMIT_MAX || 120),
+  generationRateLimitMax: Number(process.env.GENERATION_RATE_LIMIT_MAX || 20),
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || "",
   elevenLabsTtsModel: process.env.ELEVENLABS_TTS_MODEL || "eleven_multilingual_v2",
   elevenLabsOutputFormat: process.env.ELEVENLABS_OUTPUT_FORMAT || "mp3_44100_128",

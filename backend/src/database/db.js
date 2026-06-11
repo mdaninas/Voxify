@@ -54,6 +54,13 @@ export function getDb() {
   return db;
 }
 
+export function closeDb() {
+  if (db) {
+    db.close();
+    db = undefined;
+  }
+}
+
 export function logEvent(eventType, message, metadata) {
   try {
     const stmt = getDb().prepare(
