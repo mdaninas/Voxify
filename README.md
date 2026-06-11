@@ -128,9 +128,26 @@ Semua konfigurasi backend ada di `backend/.env` (salin dari `.env.example`):
 | `ELEVENLABS_API_KEY` | (kosong) | API key ElevenLabs, wajib untuk Live Mode |
 | `ELEVENLABS_TTS_MODEL` | `eleven_multilingual_v2` | Model TTS (mendukung Bahasa Indonesia) |
 | `ELEVENLABS_OUTPUT_FORMAT` | `mp3_44100_128` | Format output ElevenLabs |
+| `ELEVENLABS_TIMEOUT_MS` | `30000` | Timeout request ke ElevenLabs dalam milidetik |
+| `ELEVENLABS_MAX_RETRIES` | `2` | Jumlah retry (dengan exponential backoff) saat request ElevenLabs gagal |
+| `STORAGE_RETENTION_DAYS` | `30` | Audio hasil generate yang lebih tua dari ini dihapus otomatis (`0` = nonaktif) |
+| `MAX_STORAGE_MB` | `500` | Batas total storage; audio tertua dihapus jika terlampaui (`0` = nonaktif) |
+| `BACKUP_KEEP` | `7` | Jumlah backup harian SQLite yang disimpan di `data/backups` |
+| `MAINTENANCE_INTERVAL_HOURS` | `6` | Interval pemeliharaan storage (retention, cap, orphan cleanup, backup) |
 | `DEMO_MODE` | `false` | `true` untuk menjalankan tanpa ElevenLabs |
 
 Jangan commit file `.env`. Hanya `.env.example` yang masuk repository.
+
+### Pemeliharaan Storage & Backup
+
+Backend menjalankan pemeliharaan otomatis saat startup dan setiap `MAINTENANCE_INTERVAL_HOURS`:
+
+1. Menghapus audio hasil generate yang melewati `STORAGE_RETENTION_DAYS`.
+2. Menghapus audio tertua jika total storage melebihi `MAX_STORAGE_MB`.
+3. Membersihkan file orphan (file di storage yang tidak tercatat di database) dan file temp lama.
+4. Membuat backup harian SQLite via `VACUUM INTO` ke `data/backups`, menyimpan `BACKUP_KEEP` terakhir.
+
+Skema database dikelola dengan migration versioning (`PRAGMA user_version`) di `backend/src/database/migrations.js`.
 
 ## Cara Menggunakan
 

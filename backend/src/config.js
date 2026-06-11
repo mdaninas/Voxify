@@ -25,6 +25,12 @@ const config = {
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || "",
   elevenLabsTtsModel: process.env.ELEVENLABS_TTS_MODEL || "eleven_multilingual_v2",
   elevenLabsOutputFormat: process.env.ELEVENLABS_OUTPUT_FORMAT || "mp3_44100_128",
+  elevenLabsTimeoutMs: Number(process.env.ELEVENLABS_TIMEOUT_MS || 30000),
+  elevenLabsMaxRetries: Number(process.env.ELEVENLABS_MAX_RETRIES || 2),
+  storageRetentionDays: Number(process.env.STORAGE_RETENTION_DAYS || 30),
+  maxStorageMb: Number(process.env.MAX_STORAGE_MB || 500),
+  backupKeep: Number(process.env.BACKUP_KEEP || 7),
+  maintenanceIntervalHours: Number(process.env.MAINTENANCE_INTERVAL_HOURS || 6),
   demoMode: String(process.env.DEMO_MODE || "false").toLowerCase() === "true"
 };
 
@@ -32,6 +38,7 @@ config.samplesDir = path.join(config.storageDir, "samples");
 config.outputsDir = path.join(config.storageDir, "outputs");
 config.previewsDir = path.join(config.storageDir, "previews");
 config.tmpDir = path.join(config.storageDir, "tmp");
+config.backupsDir = path.join(path.dirname(config.databasePath), "backups");
 
 export function ensureDirectories() {
   const dirs = [
@@ -40,7 +47,8 @@ export function ensureDirectories() {
     config.samplesDir,
     config.outputsDir,
     config.previewsDir,
-    config.tmpDir
+    config.tmpDir,
+    config.backupsDir
   ];
   for (const dir of dirs) {
     fs.mkdirSync(dir, { recursive: true });

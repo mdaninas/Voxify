@@ -11,6 +11,7 @@ import voicesRouter from "./routes/voices.js";
 import speechRouter from "./routes/speech.js";
 import audiosRouter from "./routes/audios.js";
 import { migrateDemoAudioPlaceholders } from "./utils/demoMigration.js";
+import { startMaintenanceSchedule } from "./utils/storageMaintenance.js";
 
 function buildCorsOptions() {
   return {
@@ -81,6 +82,7 @@ export function createApp() {
 
 export function startServer(port = config.port) {
   const app = createApp();
+  startMaintenanceSchedule();
   return app.listen(port, () => {
     console.log(`Voxify backend berjalan di http://localhost:${port}`);
     console.log(`Mode: ${config.demoMode ? "DEMO" : "LIVE"}`);

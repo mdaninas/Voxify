@@ -91,7 +91,6 @@ export default function App() {
 
       <footer className="footer">
         <div className="footer-disclaimer">{DISCLAIMER}</div>
-        <div className="footer-brand">Voxify - MVP Fase 1 · Voice cloning ditenagai ElevenLabs API</div>
       </footer>
     </div>
   );

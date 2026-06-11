@@ -93,6 +93,63 @@ async function assertAudibleWav(filePath) {
   throw new AppError("VALIDATION_ERROR", "File audio tidak memiliki sinyal suara yang terbaca.");
 }
 
+const MIN_PAYLOAD_BYTES_PER_SECOND = {
+  ".mp3": 1000,
+  ".m4a": 800,
+  ".webm": 800
+};
+
+const MIN_PAYLOAD_ENTROPY_BITS = 4.5;
+const ENTROPY_SAMPLE_BYTES = 256 * 1024;
+
+function byteEntropyBits(buffer) {
+  if (buffer.length === 0) {
+    return 0;
+  }
+  const counts = new Array(256).fill(0);
+  for (const byte of buffer) {
+    counts[byte] += 1;
+  }
+  let entropy = 0;
+  for (const count of counts) {
+    if (count === 0) continue;
+    const p = count / buffer.length;
+    entropy -= p * Math.log2(p);
+  }
+  return entropy;
+}
+
+async function assertAudibleCompressed(filePath, durationSeconds, ext) {
+  const stats = await fs.stat(filePath);
+  const bytesPerSecond = stats.size / durationSeconds;
+  const minBytesPerSecond = MIN_PAYLOAD_BYTES_PER_SECOND[ext] || 800;
+  if (bytesPerSecond < minBytesPerSecond) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "File audio terdeteksi hening atau bitrate-nya terlalu rendah untuk sampel suara."
+    );
+  }
+
+  const sampleSize = Math.min(stats.size, ENTROPY_SAMPLE_BYTES);
+  const start = Math.max(0, Math.floor(stats.size / 2 - sampleSize / 2));
+  const sample = Buffer.alloc(sampleSize);
+  const handle = await fs.open(filePath, "r");
+  let bytesRead = 0;
+  try {
+    ({ bytesRead } = await handle.read(sample, 0, sampleSize, start));
+  } finally {
+    await handle.close();
+  }
+
+  const entropy = byteEntropyBits(sample.subarray(0, bytesRead));
+  if (entropy < MIN_PAYLOAD_ENTROPY_BITS) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "File audio tidak memiliki sinyal suara yang terbaca (terdeteksi hening)."
+    );
+  }
+}
+
 export async function validateUploadedAudio(file) {
   const ext = path.extname(file.originalname || "").toLowerCase();
   if (!ALLOWED_AUDIO_EXTENSIONS.includes(ext)) {
@@ -150,6 +207,8 @@ export async function validateUploadedAudio(file) {
 
   if (detected.ext === ".wav") {
     await assertAudibleWav(file.path);
+  } else {
+    await assertAudibleCompressed(file.path, duration, detected.ext);
   }
 
   return {
