@@ -79,13 +79,19 @@ export default function App() {
 
       <CreateVoiceSection
         voices={voices}
+        maxUploadMb={health?.max_upload_mb}
+        minSampleSeconds={health?.min_sample_seconds}
         onVoicesChanged={async () => {
           await refreshVoices();
           await refreshAudios();
         }}
       />
 
-      <GenerateSection voices={voices} onGenerated={refreshAudios} />
+      <GenerateSection
+        voices={voices}
+        maxTextLength={health?.max_text_length}
+        onGenerated={refreshAudios}
+      />
 
       <HistorySection audios={audios} onAudiosChanged={refreshAudios} />
 

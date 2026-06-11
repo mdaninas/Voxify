@@ -143,7 +143,7 @@ Jangan commit file `.env`. Hanya `.env.example` yang masuk repository.
 Backend menjalankan pemeliharaan otomatis saat startup dan setiap `MAINTENANCE_INTERVAL_HOURS`:
 
 1. Menghapus audio hasil generate yang melewati `STORAGE_RETENTION_DAYS`.
-2. Menghapus audio tertua jika total storage melebihi `MAX_STORAGE_MB`.
+2. Menghapus audio tertua jika total storage melebihi `MAX_STORAGE_MB`; jika masih lewat batas, file preview tertua ikut dihapus (sampel suara tidak pernah dihapus otomatis, hanya dicatat sebagai peringatan).
 3. Membersihkan file orphan (file di storage yang tidak tercatat di database) dan file temp lama.
 4. Membuat backup harian SQLite via `VACUUM INTO` ke `data/backups`, menyimpan `BACKUP_KEEP` terakhir.
 

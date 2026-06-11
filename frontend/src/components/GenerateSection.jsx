@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { generateSpeech } from "../utils/api.js";
 
-const MAX_TEXT_LENGTH = 1000;
+const DEFAULT_MAX_TEXT_LENGTH = 1000;
 
 const WAVE_HEIGHTS = [
   10, 22, 14, 30, 18, 34, 24, 12, 28, 20, 36, 16, 26, 32, 14, 22, 30, 18, 12, 28, 34, 20, 24, 14
@@ -13,7 +13,8 @@ function formatTime(totalSeconds) {
   return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
 }
 
-export default function GenerateSection({ voices, onGenerated }) {
+export default function GenerateSection({ voices, maxTextLength, onGenerated }) {
+  const textLimit = maxTextLength || DEFAULT_MAX_TEXT_LENGTH;
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
   const [text, setText] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -153,13 +154,13 @@ export default function GenerateSection({ voices, onGenerated }) {
             placeholder="Ketik teks yang ingin dibacakan oleh suara kamu…"
             value={text}
             disabled={!hasVoices}
-            onChange={(event) => setText(event.target.value.slice(0, MAX_TEXT_LENGTH))}
+            onChange={(event) => setText(event.target.value.slice(0, textLimit))}
           />
         </div>
 
         <div className="gen-row">
-          <div className={`char-counter ${charCount > 900 ? "warn" : ""}`}>
-            {charCount} / {MAX_TEXT_LENGTH} karakter
+          <div className={`char-counter ${charCount > textLimit * 0.9 ? "warn" : ""}`}>
+            {charCount} / {textLimit} karakter
           </div>
           <button type="button" className="cta pink" disabled={!canGenerate} onClick={handleGenerate}>
             {generating ? "Menghasilkan…" : "⚡ Generate audio"}

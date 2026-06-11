@@ -84,6 +84,36 @@ export function enforceStorageCap() {
     totalBytes -= size;
     removed += 1;
   }
+
+  if (totalBytes > limitBytes) {
+    const voicesWithPreview = db
+      .prepare(
+        "SELECT id, preview_audio_path FROM voices WHERE preview_audio_path IS NOT NULL ORDER BY created_at ASC"
+      )
+      .all();
+    for (const voice of voicesWithPreview) {
+      if (totalBytes <= limitBytes) {
+        break;
+      }
+      let size = 0;
+      try {
+        size = fs.statSync(voice.preview_audio_path).size;
+      } catch {
+      }
+      safeUnlink(voice.preview_audio_path);
+      db.prepare("UPDATE voices SET preview_audio_path = NULL WHERE id = ?").run(voice.id);
+      totalBytes -= size;
+      removed += 1;
+    }
+  }
+
+  if (totalBytes > limitBytes) {
+    logEvent("storage_cap_warning", "Storage masih melebihi batas setelah cleanup.", {
+      totalBytes,
+      limitBytes,
+      note: "Sisa storage didominasi sampel suara; sampel tidak pernah dihapus otomatis."
+    });
+  }
   return removed;
 }
 

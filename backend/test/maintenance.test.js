@@ -99,6 +99,41 @@ test("orphan cleanup menghapus file tak terdaftar yang sudah lama, menjaga file 
   await fs.access(keptPath);
 });
 
+test("storage cap menghapus output lalu preview, tidak pernah sampel", async () => {
+  const audioId = crypto.randomUUID();
+  const audioPath = path.join(config.outputsDir, `generated-audio-${audioId}.mp3`);
+  await fs.writeFile(audioPath, Buffer.alloc(4096));
+  insertAudioRow(audioId, audioPath, new Date().toISOString());
+
+  const previewPath = path.join(config.previewsDir, "voice-preview-voice-x.mp3");
+  await fs.writeFile(previewPath, Buffer.alloc(4096));
+  getDb().prepare("UPDATE voices SET preview_audio_path = ? WHERE id = 'voice-x'").run(previewPath);
+
+  const samplePath = path.join(config.samplesDir, "voice-sample-voice-x.webm");
+  await fs.writeFile(samplePath, Buffer.alloc(4096));
+  getDb().prepare("UPDATE voices SET sample_audio_path = ? WHERE id = 'voice-x'").run(samplePath);
+
+  const originalCap = config.maxStorageMb;
+  config.maxStorageMb = 0.001;
+  let removed;
+  try {
+    removed = maintenance.enforceStorageCap();
+  } finally {
+    config.maxStorageMb = originalCap;
+  }
+
+  assert.ok(removed >= 2);
+  await assert.rejects(fs.access(audioPath));
+  await assert.rejects(fs.access(previewPath));
+  await fs.access(samplePath);
+  const voiceRow = getDb().prepare("SELECT preview_audio_path FROM voices WHERE id = 'voice-x'").get();
+  assert.equal(voiceRow.preview_audio_path, null);
+  const warning = getDb()
+    .prepare("SELECT id FROM app_events WHERE event_type = 'storage_cap_warning'")
+    .all();
+  assert.ok(warning.length >= 1);
+});
+
 test("backup database dibuat sekali per hari", async () => {
   const created = maintenance.backupDatabase();
   assert.equal(created, true);

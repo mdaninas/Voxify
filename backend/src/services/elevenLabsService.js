@@ -2,11 +2,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import config from "../config.js";
 import { AppError } from "../utils/errors.js";
-import { logEvent } from "../database/db.js";
+import { getDb, logEvent } from "../database/db.js";
 
 const BASE_URL = "https://api.elevenlabs.io/v1";
 
-const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const SAFE_RETRY_STATUS = new Set([429, 503]);
+const AMBIGUOUS_STATUS = new Set([500, 502, 504]);
 
 const MIME_BY_EXT = {
   ".mp3": "audio/mpeg",
@@ -45,7 +46,7 @@ async function parseProviderError(response, requestId) {
   return new AppError("ELEVENLABS_API_ERROR", `ElevenLabs error (${response.status}): ${detail}${ref}`, 502);
 }
 
-async function providerFetch(operation, url, init) {
+async function providerFetch(operation, url, init, { idempotent = true } = {}) {
   const requestId = crypto.randomUUID();
   const maxAttempts = Math.max(1, config.elevenLabsMaxRetries + 1);
 
@@ -72,7 +73,8 @@ async function providerFetch(operation, url, init) {
           : `Tidak dapat terhubung ke ElevenLabs. Periksa koneksi internet server. [ref: ${requestId.slice(0, 8)}]`,
         timedOut ? 504 : 502
       );
-      if (attempt < maxAttempts) {
+      lastError.ambiguous = true;
+      if (idempotent && attempt < maxAttempts) {
         await sleep(backoffDelayMs(attempt));
         continue;
       }
@@ -94,7 +96,12 @@ async function providerFetch(operation, url, init) {
     }
 
     const error = await parseProviderError(response, requestId);
-    if (RETRYABLE_STATUS.has(response.status) && attempt < maxAttempts) {
+    if (AMBIGUOUS_STATUS.has(response.status)) {
+      error.ambiguous = true;
+    }
+    const canRetry =
+      SAFE_RETRY_STATUS.has(response.status) || (idempotent && AMBIGUOUS_STATUS.has(response.status));
+    if (canRetry && attempt < maxAttempts) {
       lastError = error;
       await sleep(backoffDelayMs(attempt));
       continue;
@@ -103,6 +110,24 @@ async function providerFetch(operation, url, init) {
   }
 
   throw lastError;
+}
+
+async function findRecoverableProviderVoice(name) {
+  const response = await providerFetch("list_voices", `${BASE_URL}/voices`, {
+    method: "GET",
+    headers: { "xi-api-key": config.elevenLabsApiKey }
+  });
+  const data = await response.json();
+  const knownIds = new Set(
+    getDb()
+      .prepare("SELECT provider_voice_id FROM voices")
+      .all()
+      .map((row) => row.provider_voice_id)
+  );
+  const candidates = (data?.voices || []).filter(
+    (voice) => voice?.name === name && voice?.voice_id && !knownIds.has(voice.voice_id)
+  );
+  return candidates.length === 1 ? candidates[0].voice_id : null;
 }
 
 export async function createInstantVoiceClone(name, sampleFilePath) {
@@ -114,11 +139,31 @@ export async function createInstantVoiceClone(name, sampleFilePath) {
   form.append("name", name);
   form.append("files", blob, `sample${ext}`);
 
-  const response = await providerFetch("create_voice", `${BASE_URL}/voices/add`, {
-    method: "POST",
-    headers: { "xi-api-key": config.elevenLabsApiKey },
-    body: form
-  });
+  let response;
+  try {
+    response = await providerFetch(
+      "create_voice",
+      `${BASE_URL}/voices/add`,
+      {
+        method: "POST",
+        headers: { "xi-api-key": config.elevenLabsApiKey },
+        body: form
+      },
+      { idempotent: false }
+    );
+  } catch (err) {
+    if (err?.ambiguous) {
+      const recoveredId = await findRecoverableProviderVoice(name).catch(() => null);
+      if (recoveredId) {
+        logEvent("provider_voice_recovered", "Voice ditemukan di provider setelah request ambigu.", {
+          name,
+          providerVoiceId: recoveredId
+        });
+        return recoveredId;
+      }
+    }
+    throw err;
+  }
 
   const data = await response.json();
   if (!data?.voice_id) {

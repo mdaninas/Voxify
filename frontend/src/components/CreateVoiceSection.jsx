@@ -6,7 +6,8 @@ const CONSENT_LABEL =
   "Saya menyatakan bahwa suara yang saya unggah atau rekam adalah suara saya sendiri, atau saya memiliki izin resmi dari pemilik suara untuk membuat voice clone.";
 
 const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".m4a", ".webm"];
-const MAX_UPLOAD_MB = 25;
+const DEFAULT_MAX_UPLOAD_MB = 25;
+const DEFAULT_MIN_SAMPLE_SECONDS = 10;
 
 const AVATAR_COLORS = ["#5b3df5", "#f4458e", "#00a87e", "#ffb43a"];
 const PASTEL_SHADOWS = ["#d8ccf8", "#fbc7dd", "#b8f0d8", "#ffe2b0"];
@@ -24,7 +25,14 @@ function formatVoiceDate(value) {
   });
 }
 
-export default function CreateVoiceSection({ voices, onVoicesChanged }) {
+export default function CreateVoiceSection({
+  voices,
+  maxUploadMb,
+  minSampleSeconds,
+  onVoicesChanged
+}) {
+  const uploadLimitMb = maxUploadMb || DEFAULT_MAX_UPLOAD_MB;
+  const minSeconds = minSampleSeconds || DEFAULT_MIN_SAMPLE_SECONDS;
   const [tab, setTab] = useState("record");
   const [uploadFile, setUploadFile] = useState(null);
   const [recordedBlob, setRecordedBlob] = useState(null);
@@ -59,8 +67,8 @@ export default function CreateVoiceSection({ voices, onVoicesChanged }) {
       event.target.value = "";
       return;
     }
-    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
-      setError(`Ukuran file melebihi batas ${MAX_UPLOAD_MB} MB.`);
+    if (file.size > uploadLimitMb * 1024 * 1024) {
+      setError(`Ukuran file melebihi batas ${uploadLimitMb} MB.`);
       setUploadFile(null);
       event.target.value = "";
       return;
@@ -135,7 +143,11 @@ export default function CreateVoiceSection({ voices, onVoicesChanged }) {
   }
 
   async function handleDeleteVoice(voiceId, name) {
-    if (!window.confirm(`Hapus voice "${name}" beserta seluruh audio hasil generate-nya?`)) {
+    if (
+      !window.confirm(
+        `Hapus voice "${name}" beserta seluruh audio hasil generate-nya? Pada Live Mode, voice juga akan dihapus dari ElevenLabs.`
+      )
+    ) {
       return;
     }
     if (playingVoiceId === voiceId) {
@@ -180,7 +192,11 @@ export default function CreateVoiceSection({ voices, onVoicesChanged }) {
         </div>
 
         {tab === "record" ? (
-          <VoiceRecorder recordedBlob={recordedBlob} onRecorded={setRecordedBlob} />
+          <VoiceRecorder
+            recordedBlob={recordedBlob}
+            onRecorded={setRecordedBlob}
+            minSeconds={minSeconds}
+          />
         ) : (
           <label className={`dropzone ${uploadFile ? "has-file" : ""}`}>
             <input
@@ -205,7 +221,7 @@ export default function CreateVoiceSection({ voices, onVoicesChanged }) {
                   Klik untuk <span className="drop-link">memilih file audio</span>
                 </div>
                 <div className="drop-meta">
-                  .mp3 / .wav / .m4a / .webm · maks {MAX_UPLOAD_MB} MB · minimal 10 detik
+                  .mp3 / .wav / .m4a / .webm · maks {uploadLimitMb} MB · minimal {minSeconds} detik
                 </div>
               </>
             )}

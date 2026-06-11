@@ -34,8 +34,10 @@ export async function createVoice({ name, audioFile, consentAccepted, sourceType
   return parseResponse(res);
 }
 
-export async function deleteVoice(voiceId) {
-  const res = await fetch(`/api/voices/${voiceId}`, { method: "DELETE" });
+export async function deleteVoice(voiceId, { deleteProvider = true } = {}) {
+  const res = await fetch(`/api/voices/${voiceId}?delete_provider=${deleteProvider}`, {
+    method: "DELETE"
+  });
   return parseResponse(res);
 }
 

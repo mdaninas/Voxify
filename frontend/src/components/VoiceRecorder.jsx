@@ -4,7 +4,7 @@ const RECORDING_SCRIPT = `Saya menyatakan bahwa ini suara saya sendiri dan saya 
 
 Halo, saya sedang merekam suara untuk membuat profil suara pribadi. Saya berbicara dengan jelas, santai, dan alami. Satu, dua, tiga, mari kita mulai.`;
 
-const MIN_SECONDS = 10;
+const DEFAULT_MIN_SECONDS = 10;
 const MAX_SECONDS = 30;
 const BAR_COUNT = 28;
 const WAVE_COLORS = ["#f4458e", "#5b3df5", "#ffb43a", "#00a87e"];
@@ -15,7 +15,7 @@ function formatTimer(totalSeconds) {
   return `${m}:${s}`;
 }
 
-export default function VoiceRecorder({ recordedBlob, onRecorded }) {
+export default function VoiceRecorder({ recordedBlob, onRecorded, minSeconds = DEFAULT_MIN_SECONDS }) {
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [recError, setRecError] = useState("");
@@ -94,9 +94,9 @@ export default function VoiceRecorder({ recordedBlob, onRecorded }) {
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
         stopVisualizer();
-        if (secondsRef.current < MIN_SECONDS) {
+        if (secondsRef.current < minSeconds) {
           setRecError(
-            `Rekaman terlalu pendek (${secondsRef.current} detik). Minimal ${MIN_SECONDS} detik, silakan rekam ulang.`
+            `Rekaman terlalu pendek (${secondsRef.current} detik). Minimal ${minSeconds} detik, silakan rekam ulang.`
           );
           setSeconds(0);
           secondsRef.current = 0;
@@ -174,7 +174,7 @@ export default function VoiceRecorder({ recordedBlob, onRecorded }) {
       <div className="rec-label">{statusLabel}</div>
       <div className={`rec-timer ${recording ? "active" : ""}`}>{formatTimer(seconds)}</div>
       <div className="rec-hint">
-        Durasi {MIN_SECONDS}-{MAX_SECONDS} detik (berhenti otomatis di {MAX_SECONDS} detik), satu
+        Durasi {minSeconds}-{MAX_SECONDS} detik (berhenti otomatis di {MAX_SECONDS} detik), satu
         pembicara, tanpa musik latar keras.
       </div>
       {previewUrl && !recording && <audio className="recorded-audio" controls src={previewUrl} />}
