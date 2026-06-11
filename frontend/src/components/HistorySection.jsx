@@ -3,9 +3,21 @@ import { deleteAudio } from "../utils/api.js";
 
 const FILL_COLORS = ["#f4458e", "#5b3df5", "#ffb43a", "#00a87e"];
 const PASTEL_SHADOWS = ["#d8ccf8", "#fbc7dd", "#b8f0d8", "#ffe2b0"];
+const WAVE_BAR_COUNT = 44;
 
 function truncate(value, max = 120) {
   return value.length > max ? value.slice(0, max) + "…" : value;
+}
+
+function waveHeights(id) {
+  let seed = 0;
+  for (const ch of id) {
+    seed = (seed * 31 + ch.charCodeAt(0)) % 9973;
+  }
+  return Array.from({ length: WAVE_BAR_COUNT }, () => {
+    seed = (seed * 137 + 71) % 9973;
+    return 6 + (seed % 18);
+  });
 }
 
 function formatHistoryDate(value) {
@@ -146,14 +158,22 @@ export default function HistorySection({ audios, onAudiosChanged }) {
                   >
                     {playing ? "❚❚" : "▶"}
                   </button>
-                  <div className="progress-track">
-                    <div
-                      className="progress-fill"
-                      style={{
-                        width: `${playing ? Math.round(progress * 100) : 0}%`,
-                        background: FILL_COLORS[index % FILL_COLORS.length]
-                      }}
-                    />
+                  <div className="player-wave">
+                    {waveHeights(audio.id).map((height, barIndex) => {
+                      const filled =
+                        playing && barIndex < Math.round(progress * WAVE_BAR_COUNT);
+                      return (
+                        <span
+                          key={barIndex}
+                          style={{
+                            height: `${height}px`,
+                            background: filled
+                              ? FILL_COLORS[index % FILL_COLORS.length]
+                              : undefined
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                   <div className="player-time">
                     {formatTime(playing ? elapsed : durations[audio.id])}

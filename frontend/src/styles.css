@@ -369,6 +369,19 @@ select:focus {
   color: var(--pink);
 }
 
+.live-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 44px;
+}
+
+.live-wave span {
+  width: 4px;
+  border-radius: 2px;
+  transition: height 0.08s linear;
+}
+
 .rec-hint {
   font-size: 13px;
   color: var(--text-muted);
@@ -1022,22 +1035,23 @@ select:focus {
   color: var(--cream);
 }
 
-.progress-track {
+.player-wave {
   flex: 1;
-  height: 6px;
-  border-radius: 3px;
-  background: #e6e0f2;
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+  height: 28px;
+  min-width: 0;
   overflow: hidden;
 }
 
-.progress-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  border-radius: 3px;
-  transition: width 0.3s;
+.player-wave span {
+  flex: 1;
+  max-width: 5px;
+  border-radius: 2px;
+  background: #e6e0f2;
+  transition: background 0.2s;
 }
 
 .player-time {
