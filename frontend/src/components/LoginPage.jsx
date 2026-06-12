@@ -62,27 +62,61 @@ export default function LoginPage({ clientId, onLoggedIn }) {
   }, [clientId, onLoggedIn]);
 
   return (
-    <div className="login-wrap">
-      <div className="login-card">
-        <div className="logo-box">
-          <div className="logo-bars">
-            <span />
-            <span />
-            <span />
+    <div className="login-landing">
+      <header className="top-bar login-top-bar">
+        <div className="logo-row">
+          <div className="logo-box">
+            <div className="logo-bars">
+              <span />
+              <span />
+              <span />
+            </div>
           </div>
+          <div className="wordmark">Voxify</div>
         </div>
-        <div className="wordmark">Voxify</div>
-        <p className="login-sub">
-          Masuk dengan akun Google untuk membuat voice clone dan generate audio dengan suaramu
-          sendiri.
-        </p>
-        <div className="gsi-slot" ref={buttonRef} />
-        {loading && <p className="login-sub">Memproses login…</p>}
-        {error && <div className="error-box">{error}</div>}
-        <p className="login-foot">
-          Gunakan hanya suara milik sendiri atau suara yang sudah mendapat izin.
-        </p>
-      </div>
+        <div className="mode-pill live">Ethical Voice AI</div>
+      </header>
+
+      <main className="login-hero">
+        <section className="login-copy">
+          <h1>Clone suaramu. Generate audio dengan kontrol penuh.</h1>
+          <p>
+            Masuk untuk membuat voice clone dari suara sendiri, menulis naskah, dan menyimpan
+            hasil audio sebagai MP3.
+          </p>
+          <div className="login-highlights">
+            <span>Consent wajib</span>
+            <span>History privat</span>
+            <span>Download MP3</span>
+          </div>
+        </section>
+
+        <section className="login-card" aria-label="Login Voxify">
+          <div className="login-card-mark">
+            <div className="logo-box">
+              <div className="logo-bars">
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
+            <div>
+              <div className="wordmark">Voxify</div>
+              <p className="login-sub">Voice studio pribadi</p>
+            </div>
+          </div>
+          <p className="login-sub">
+            Gunakan akun Google untuk membuka studio dan menjaga data voice tetap terhubung
+            ke akunmu.
+          </p>
+          <div className="gsi-slot" ref={buttonRef} />
+          {loading && <p className="login-sub">Memproses login...</p>}
+          {error && <div className="error-box">{error}</div>}
+          <p className="login-foot">
+            Gunakan hanya suara milik sendiri atau suara yang sudah mendapat izin.
+          </p>
+        </section>
+      </main>
     </div>
   );
 }
