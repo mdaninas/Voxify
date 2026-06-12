@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createVoice, deleteAudio, generateSpeech, getHealth } from "./api.js";
+import { createVoice, deleteAudio, deleteVoice, generateSpeech, getHealth } from "./api.js";
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -27,6 +27,8 @@ test("api client sends expected requests", async () => {
     });
     await generateSpeech({ voiceId: "voice-1", text: "Halo" });
     await deleteAudio("audio-1");
+    await deleteVoice("voice-1");
+    await deleteVoice("voice-2", { deleteProvider: false });
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -49,6 +51,12 @@ test("api client sends expected requests", async () => {
 
   assert.equal(calls[3].url, "/api/audios/audio-1");
   assert.equal(calls[3].options.method, "DELETE");
+
+  assert.equal(calls[4].url, "/api/voices/voice-1?delete_provider=true");
+  assert.equal(calls[4].options.method, "DELETE");
+
+  assert.equal(calls[5].url, "/api/voices/voice-2?delete_provider=false");
+  assert.equal(calls[5].options.method, "DELETE");
 });
 
 test("api client exposes backend error messages and codes", async () => {

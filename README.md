@@ -171,6 +171,17 @@ Skema database dikelola dengan migration versioning (`PRAGMA user_version`) di `
 
 Saat Demo Mode aktif, UI menampilkan badge **Demo Mode Active**.
 
+### Validasi Live Mode
+
+Setelah mengisi `ELEVENLABS_API_KEY` dan men-set `DEMO_MODE=false`, jalankan smoke test sekali jalan untuk membuktikan integrasi provider benar-benar bekerja:
+
+```bash
+cd backend
+npm run check:live
+```
+
+Script ini membuat voice clone percobaan, menguji TTS, lalu menghapus voice percobaan dari ElevenLabs. Memakai sedikit kuota ElevenLabs dan butuh paket yang mendukung Instant Voice Cloning.
+
 ## API Endpoints
 
 | Method | Endpoint | Keterangan |
