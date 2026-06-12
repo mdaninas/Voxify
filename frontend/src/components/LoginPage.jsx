@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { loginWithGoogle } from "../utils/api.js";
 
 const GSI_SCRIPT_URL = "https://accounts.google.com/gsi/client";
+let googleClientId = "";
+let googleClientInitialized = false;
+let googleCredentialCallback = null;
 
 const WORKFLOW_STEPS = [
   {
@@ -76,69 +79,129 @@ function LandingPreview() {
       <div className="preview-consent">
         <span>OK</span>
         <div>
-          <strong>Ethical by default</strong>
-          <p>Voice hanya untuk suara sendiri atau yang sudah mendapat izin.</p>
+          <strong>Consent aktif</strong>
+          <p>Voice dibuat dari suara sendiri atau suara yang sudah mendapat izin.</p>
         </div>
       </div>
     </div>
   );
 }
 
-export default function LoginPage({ clientId, onLoggedIn }) {
+export default function LoginPage({ clientId, theme, onThemeToggle, onLoggedIn }) {
   const buttonRef = useRef(null);
+  const hasRenderedGoogleButtonRef = useRef(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const isDarkTheme = theme === "dark";
+
+  function handleAnchorClick(event) {
+    const href = event.currentTarget.getAttribute("href");
+    if (!href?.startsWith("#")) {
+      return;
+    }
+
+    const target = document.querySelector(href);
+    if (!target) {
+      return;
+    }
+
+    event.preventDefault();
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const headerOffset = 96;
+    const targetTop = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+
+    window.history.pushState(null, "", href);
+    window.scrollTo({
+      top: Math.max(targetTop, 0),
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
 
-    function renderButton() {
-      if (cancelled || !window.google?.accounts?.id || !buttonRef.current) {
+    const handleCredential = async (response) => {
+      setError("");
+      setLoading(true);
+      try {
+        await loginWithGoogle(response.credential);
+        onLoggedIn();
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    googleCredentialCallback = handleCredential;
+
+    function ensureGoogleInitialized() {
+      if (googleClientInitialized && googleClientId === clientId) {
         return;
       }
+
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: async (response) => {
-          setError("");
-          setLoading(true);
-          try {
-            await loginWithGoogle(response.credential);
-            onLoggedIn();
-          } catch (err) {
-            setError(err.message);
-          } finally {
-            setLoading(false);
-          }
+        callback: (response) => {
+          googleCredentialCallback?.(response);
         }
       });
+      googleClientId = clientId;
+      googleClientInitialized = true;
+    }
+
+    function renderButton() {
+      if (
+        cancelled ||
+        !window.google?.accounts?.id ||
+        !buttonRef.current ||
+        hasRenderedGoogleButtonRef.current
+      ) {
+        return;
+      }
+
+      ensureGoogleInitialized();
       window.google.accounts.id.renderButton(buttonRef.current, {
         theme: "outline",
         size: "large",
         text: "signin_with",
         width: 280
       });
+      hasRenderedGoogleButtonRef.current = true;
+    }
+
+    function handleScriptError() {
+      if (!cancelled) {
+        setError("Gagal memuat layanan login Google. Periksa koneksi internet.");
+      }
+    }
+
+    function cleanup() {
+      cancelled = true;
+      if (googleCredentialCallback === handleCredential) {
+        googleCredentialCallback = null;
+      }
     }
 
     if (window.google?.accounts?.id) {
       renderButton();
-      return () => {
-        cancelled = true;
-      };
+      return cleanup;
     }
 
-    const script = document.createElement("script");
-    script.src = GSI_SCRIPT_URL;
-    script.async = true;
-    script.onload = renderButton;
-    script.onerror = () => {
-      if (!cancelled) {
-        setError("Gagal memuat layanan login Google. Periksa koneksi internet.");
-      }
-    };
-    document.head.appendChild(script);
+    let script = document.querySelector(`script[src="${GSI_SCRIPT_URL}"]`);
+    if (!script) {
+      script = document.createElement("script");
+      script.src = GSI_SCRIPT_URL;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    script.addEventListener("load", renderButton);
+    script.addEventListener("error", handleScriptError);
 
     return () => {
-      cancelled = true;
+      script.removeEventListener("load", renderButton);
+      script.removeEventListener("error", handleScriptError);
+      cleanup();
     };
   }, [clientId, onLoggedIn]);
 
@@ -156,11 +219,24 @@ export default function LoginPage({ clientId, onLoggedIn }) {
           <div className="wordmark">Voxify</div>
         </div>
         <nav className="main-nav" aria-label="Navigasi landing">
-          <a href="#workflow">Cara kerja</a>
-          <a href="#safety">Keamanan</a>
-          <a href="#login">Masuk</a>
+          <a href="#workflow" onClick={handleAnchorClick}>Cara kerja</a>
+          <a href="#safety" onClick={handleAnchorClick}>Keamanan</a>
+          <a href="#login" onClick={handleAnchorClick}>Masuk</a>
         </nav>
-        <div className="mode-pill live">Ethical Voice AI</div>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={onThemeToggle}
+            aria-label={isDarkTheme ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
+          >
+            <span className="theme-toggle-dot" />
+            {isDarkTheme ? "Terang" : "Gelap"}
+          </button>
+          <a className="header-cta" href="#login" onClick={handleAnchorClick}>
+            Masuk
+          </a>
+        </div>
       </header>
 
       <main className="login-hero">
@@ -171,10 +247,10 @@ export default function LoginPage({ clientId, onLoggedIn }) {
             hasil audio sebagai MP3.
           </p>
           <div className="hero-actions">
-            <a className="primary-link" href="#login">
+            <a className="primary-link" href="#login" onClick={handleAnchorClick}>
               Masuk ke studio
             </a>
-            <a className="secondary-link" href="#workflow">
+            <a className="secondary-link" href="#workflow" onClick={handleAnchorClick}>
               Lihat cara kerja
             </a>
           </div>
@@ -225,9 +301,15 @@ export default function LoginPage({ clientId, onLoggedIn }) {
       </section>
 
       <section id="login" className="final-cta login-final-cta">
-        <div>
-          <h2>Masuk untuk membuka Studio.</h2>
-          <p>Setelah login, halaman berikutnya hanya berisi Studio untuk membuat dan mengelola audio.</p>
+        <div className="login-final-copy">
+          <span className="section-kicker">Akses Studio</span>
+          <h2>Masuk dan langsung mulai dari Studio.</h2>
+          <p>Setelah login, halaman berikutnya fokus ke pembuatan voice, generate speech, dan history audio.</p>
+          <div className="login-cta-points" aria-label="Fitur studio setelah login">
+            <span>Studio bersih</span>
+            <span>Data per akun</span>
+            <span>History audio</span>
+          </div>
         </div>
         <section className="login-card" aria-label="Login Voxify">
           <div className="login-card-mark">
@@ -255,6 +337,33 @@ export default function LoginPage({ clientId, onLoggedIn }) {
           </p>
         </section>
       </section>
+
+      <footer className="landing-footer">
+        <div className="landing-footer-main">
+          <div className="footer-brand-block">
+            <div className="logo-row">
+              <div className="logo-box">
+                <div className="logo-bars">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+              <div className="wordmark">Voxify</div>
+            </div>
+            <p>Voice studio pribadi untuk membuat, mengelola, dan mengunduh audio dari suara yang berizin.</p>
+          </div>
+          <nav className="footer-nav" aria-label="Navigasi footer">
+            <a href="#workflow" onClick={handleAnchorClick}>Cara kerja</a>
+            <a href="#safety" onClick={handleAnchorClick}>Keamanan</a>
+            <a href="#login" onClick={handleAnchorClick}>Masuk</a>
+          </nav>
+        </div>
+        <div className="landing-footer-bottom">
+          <span>© 2026 Voxify.</span>
+          <span>Gunakan hanya suara milik sendiri atau suara yang sudah mendapat izin.</span>
+        </div>
+      </footer>
     </div>
   );
 }

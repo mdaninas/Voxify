@@ -8,12 +8,38 @@ import { getHealth, listVoices, listAudios, getAuthConfig, getMe, logout } from 
 const DISCLAIMER =
   "Gunakan hanya suara milik sendiri atau suara yang sudah mendapat izin. Jangan gunakan aplikasi ini untuk meniru orang lain tanpa izin, penipuan, ancaman, fitnah, atau aktivitas ilegal.";
 
+const THEME_STORAGE_KEY = "voxify-theme";
+
+function getInitialTheme() {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme === "dark" || savedTheme === "light") {
+    return savedTheme;
+  }
+
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 export default function App() {
   const [auth, setAuth] = useState({ status: "loading", user: null, clientId: null });
   const [health, setHealth] = useState(null);
   const [voices, setVoices] = useState([]);
   const [audios, setAudios] = useState([]);
   const [backendError, setBackendError] = useState("");
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
+  }, []);
 
   const refreshVoices = useCallback(async () => {
     const response = await listVoices();
@@ -90,7 +116,14 @@ export default function App() {
   }
 
   if (auth.status === "anon") {
-    return <LoginPage clientId={auth.clientId} onLoggedIn={initAuth} />;
+    return (
+      <LoginPage
+        clientId={auth.clientId}
+        theme={theme}
+        onThemeToggle={toggleTheme}
+        onLoggedIn={initAuth}
+      />
+    );
   }
 
   return (
@@ -108,6 +141,15 @@ export default function App() {
         </div>
 
         <div className="top-bar-right">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
+          >
+            <span className="theme-toggle-dot" />
+            {theme === "dark" ? "Terang" : "Gelap"}
+          </button>
           {health &&
             (health.demo_mode ? (
               <div className="mode-pill">Demo Mode</div>

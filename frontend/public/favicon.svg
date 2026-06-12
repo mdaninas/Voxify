@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Voxify">
+  <rect x="17" y="17" width="36" height="36" rx="12" fill="#ffb43a" transform="rotate(-6 35 35)" />
+  <rect x="11" y="11" width="36" height="36" rx="12" fill="#5b3df5" transform="rotate(-6 29 29)" />
+  <g transform="rotate(-6 29 29)">
+    <rect x="22" y="25" width="4" height="12" rx="2" fill="#fff8ec" />
+    <rect x="30" y="19" width="4" height="22" rx="2" fill="#ffb43a" />
+    <rect x="38" y="27" width="4" height="10" rx="2" fill="#fff8ec" />
+  </g>
+</svg>
