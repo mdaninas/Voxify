@@ -31,8 +31,15 @@ const config = {
   maxStorageMb: Number(process.env.MAX_STORAGE_MB || 500),
   backupKeep: Number(process.env.BACKUP_KEEP || 7),
   maintenanceIntervalHours: Number(process.env.MAINTENANCE_INTERVAL_HOURS || 6),
+  googleClientId: (process.env.GOOGLE_CLIENT_ID || "").trim(),
+  sessionSecret: (process.env.SESSION_SECRET || "").trim(),
+  sessionTtlHours: Number(process.env.SESSION_TTL_HOURS || 168),
   demoMode: String(process.env.DEMO_MODE || "false").toLowerCase() === "true"
 };
+
+export function isAuthEnabled() {
+  return config.googleClientId.length > 0;
+}
 
 config.samplesDir = path.join(config.storageDir, "samples");
 config.outputsDir = path.join(config.storageDir, "outputs");

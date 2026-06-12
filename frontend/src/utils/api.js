@@ -19,6 +19,30 @@ export async function getHealth() {
   return parseResponse(res);
 }
 
+export async function getAuthConfig() {
+  const res = await fetch("/api/auth/config");
+  return parseResponse(res);
+}
+
+export async function getMe() {
+  const res = await fetch("/api/auth/me");
+  return parseResponse(res);
+}
+
+export async function loginWithGoogle(credential) {
+  const res = await fetch("/api/auth/google", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential })
+  });
+  return parseResponse(res);
+}
+
+export async function logout() {
+  const res = await fetch("/api/auth/logout", { method: "POST" });
+  return parseResponse(res);
+}
+
 export async function listVoices() {
   const res = await fetch("/api/voices");
   return parseResponse(res);

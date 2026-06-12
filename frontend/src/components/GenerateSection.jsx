@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { generateSpeech } from "../utils/api.js";
+import { voiceDisplayName } from "../utils/format.js";
 
 const DEFAULT_MAX_TEXT_LENGTH = 1000;
 
@@ -131,7 +132,7 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
             {hasVoices ? (
               voices.map((voice) => (
                 <option key={voice.id} value={voice.id}>
-                  {voice.name}
+                  {voiceDisplayName(voice.name)}
                 </option>
               ))
             ) : (
@@ -163,7 +164,7 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
             {charCount} / {textLimit} karakter
           </div>
           <button type="button" className="cta pink" disabled={!canGenerate} onClick={handleGenerate}>
-            {generating ? "Menghasilkan…" : "⚡ Generate audio"}
+            {generating ? "Menghasilkan…" : "Generate audio"}
           </button>
         </div>
 
@@ -178,14 +179,15 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
               <span />
             </div>
             <div className="gen-status-text">
-              Memproses teks menjadi suara dengan <strong>{selectedVoice?.name}</strong>…
+              Memproses teks menjadi suara dengan{" "}
+              <strong>{selectedVoice ? voiceDisplayName(selectedVoice.name) : ""}</strong>…
             </div>
           </div>
         )}
 
         {result && !generating && (
           <div className="latest-card">
-            <div className="latest-label">Hasil terakhir · {result.voice_name}</div>
+            <div className="latest-label">Hasil terakhir · {voiceDisplayName(result.voice_name)}</div>
             <div className="latest-row">
               <button type="button" className="latest-play" onClick={togglePlay}>
                 {playing ? "❚❚" : "▶"}
@@ -209,7 +211,7 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
                 "{result.text.length > 70 ? result.text.slice(0, 70) + "…" : result.text}"
               </div>
               <a className="download-btn" href={result.download_url}>
-                ⬇ Download {String(result.output_format || "mp3").toUpperCase()}
+                Download {String(result.output_format || "mp3").toUpperCase()}
               </a>
             </div>
           </div>

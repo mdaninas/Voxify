@@ -4,6 +4,7 @@ Aplikasi web untuk membuat suara sintetis dari sampel suara milik sendiri. User 
 
 ## Fitur Utama
 
+- Login dengan akun Google (opsional): aplikasi terkunci di balik halaman login dan data voice/audio terisolasi per user. Jika tidak dikonfigurasi, aplikasi berjalan mode single-user tanpa login.
 - Rekam suara langsung dari browser menggunakan MediaRecorder API (10-30 detik, otomatis berhenti di 30 detik), lengkap dengan timer, script bacaan, dan preview rekaman.
 - Upload file audio (`.mp3`, `.wav`, `.m4a`, `.webm`) sebagai alternatif sampel suara, maksimal 25 MB.
 - Consent checkbox wajib sebelum membuat voice clone, divalidasi di frontend dan backend, tersimpan dengan timestamp.
@@ -125,6 +126,9 @@ Semua konfigurasi backend ada di `backend/.env` (salin dari `.env.example`):
 | `RATE_LIMIT_WINDOW_MS` | `900000` | Jendela rate limit API dalam milidetik |
 | `RATE_LIMIT_MAX` | `120` | Maksimal request API per jendela |
 | `GENERATION_RATE_LIMIT_MAX` | `20` | Maksimal request proses audio per jendela |
+| `GOOGLE_CLIENT_ID` | (kosong) | OAuth Client ID Google; kosongkan untuk menonaktifkan login |
+| `SESSION_SECRET` | (kosong) | Secret penandatangan session cookie; isi string acak panjang |
+| `SESSION_TTL_HOURS` | `168` | Masa berlaku session login dalam jam |
 | `ELEVENLABS_API_KEY` | (kosong) | API key ElevenLabs, wajib untuk Live Mode |
 | `ELEVENLABS_TTS_MODEL` | `eleven_multilingual_v2` | Model TTS (mendukung Bahasa Indonesia) |
 | `ELEVENLABS_OUTPUT_FORMAT` | `mp3_44100_128` | Format output ElevenLabs |
@@ -148,6 +152,24 @@ Backend menjalankan pemeliharaan otomatis saat startup dan setiap `MAINTENANCE_I
 4. Membuat backup harian SQLite via `VACUUM INTO` ke `data/backups`, menyimpan `BACKUP_KEEP` terakhir.
 
 Skema database dikelola dengan migration versioning (`PRAGMA user_version`) di `backend/src/database/migrations.js`.
+
+## Login dengan Google
+
+Login bersifat opsional dan aktif hanya jika `GOOGLE_CLIENT_ID` diisi:
+
+1. Buka [Google Cloud Console](https://console.cloud.google.com) lalu buat project (atau pakai yang sudah ada).
+2. Masuk ke **APIs & Services -> Credentials -> Create Credentials -> OAuth client ID**, pilih tipe **Web application**.
+3. Tambahkan `http://localhost:5173` ke **Authorized JavaScript origins**.
+4. Salin Client ID-nya ke `backend/.env` sebagai `GOOGLE_CLIENT_ID`, dan isi `SESSION_SECRET` dengan string acak panjang.
+5. Restart backend. Frontend otomatis menampilkan halaman login Google.
+
+Perilaku:
+
+- Semua endpoint voice/speech/audio butuh login; tanpa session valid akan dijawab `UNAUTHORIZED` (401).
+- Data voice dan audio terisolasi per user; tiap akun Google hanya melihat miliknya sendiri.
+- User Google pertama yang login otomatis mengadopsi data yang dibuat sebelum login diaktifkan.
+- Session disimpan sebagai cookie httpOnly bertanda tangan HMAC, berlaku `SESSION_TTL_HOURS` jam.
+- Jika `GOOGLE_CLIENT_ID` kosong, login dinonaktifkan dan aplikasi berjalan single-user seperti sebelumnya.
 
 ## Cara Menggunakan
 
@@ -187,6 +209,10 @@ Script ini membuat voice clone percobaan, menguji TTS, lalu menghapus voice perc
 | Method | Endpoint | Keterangan |
 |---|---|---|
 | GET | `/api/health` | Health check + status mode |
+| GET | `/api/auth/config` | Status login Google + client id |
+| GET | `/api/auth/me` | Profil user yang sedang login |
+| POST | `/api/auth/google` | Login dengan credential Google Identity Services |
+| POST | `/api/auth/logout` | Logout dan hapus session cookie |
 | POST | `/api/voices` | Buat voice clone (multipart: `name`, `audio_file`, `consent_accepted`, `source_type`) |
 | GET | `/api/voices` | Daftar voice clone |
 | GET | `/api/voices/:id/preview` | Stream preview suara hasil clone (±5 detik) |
@@ -209,7 +235,7 @@ Format error konsisten:
 }
 ```
 
-Kode error: `VALIDATION_ERROR`, `FILE_TOO_LARGE`, `UNSUPPORTED_FILE_TYPE`, `CONSENT_REQUIRED`, `ELEVENLABS_API_ERROR`, `VOICE_NOT_FOUND`, `AUDIO_NOT_FOUND`, `INTERNAL_SERVER_ERROR`.
+Kode error: `VALIDATION_ERROR`, `FILE_TOO_LARGE`, `UNSUPPORTED_FILE_TYPE`, `CONSENT_REQUIRED`, `UNAUTHORIZED`, `ELEVENLABS_API_ERROR`, `VOICE_NOT_FOUND`, `AUDIO_NOT_FOUND`, `INTERNAL_SERVER_ERROR`.
 
 ## Consent & Keamanan
 

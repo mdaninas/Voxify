@@ -26,7 +26,9 @@ router.post("/generate", async (req, res) => {
       );
     }
 
-    const voice = getDb().prepare("SELECT * FROM voices WHERE id = ?").get(voiceId);
+    const voice = getDb()
+      .prepare("SELECT * FROM voices WHERE id = ? AND user_id = ?")
+      .get(voiceId, req.user.id);
     if (!voice) {
       throw new AppError("VOICE_NOT_FOUND", "Voice tidak ditemukan.", 404);
     }
@@ -58,10 +60,10 @@ router.post("/generate", async (req, res) => {
     getDb()
       .prepare(
         `INSERT INTO generated_audios
-          (id, voice_id, text, audio_path, output_format, provider, provider_voice_id, character_count, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (id, voice_id, text, audio_path, output_format, provider, provider_voice_id, character_count, created_at, user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(audioId, voiceId, text, audioPath, outputFormat, "elevenlabs", voice.provider_voice_id, text.length, now);
+      .run(audioId, voiceId, text, audioPath, outputFormat, "elevenlabs", voice.provider_voice_id, text.length, now, req.user.id);
 
     logEvent("audio_generated", `Audio dibuat dari voice: ${voice.name}`, {
       audioId,

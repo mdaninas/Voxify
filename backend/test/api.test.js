@@ -12,6 +12,7 @@ process.env.APP_PORT = "0";
 process.env.DATABASE_PATH = path.join(tempRoot, "data", "app.sqlite");
 process.env.STORAGE_DIR = path.join(tempRoot, "storage");
 process.env.DEMO_MODE = "true";
+process.env.GOOGLE_CLIENT_ID = "";
 process.env.MIN_SAMPLE_SECONDS = "10";
 process.env.RATE_LIMIT_MAX = "1000";
 process.env.GENERATION_RATE_LIMIT_MAX = "1000";
@@ -109,6 +110,15 @@ test("voice upload, consent, generate, history, download, delete, and error case
   assert.equal(created.body.success, true);
   assert.ok(created.body.data.id);
   assert.ok(created.body.data.preview_url.endsWith("/preview"));
+
+  const duplicateName = await createVoice();
+  assert.equal(duplicateName.response.status, 400);
+  assert.equal(duplicateName.body.error.code, "VALIDATION_ERROR");
+  assert.match(duplicateName.body.error.message, /sudah dipakai/i);
+
+  const duplicateNameCaseInsensitive = await createVoice({ name: "VOICE TEST" });
+  assert.equal(duplicateNameCaseInsensitive.response.status, 400);
+  assert.match(duplicateNameCaseInsensitive.body.error.message, /sudah dipakai/i);
 
   const preview = await fetch(`${baseUrl}${created.body.data.preview_url}`);
   assert.equal(preview.status, 200);

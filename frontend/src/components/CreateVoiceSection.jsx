@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import VoiceRecorder from "./VoiceRecorder.jsx";
 import { createVoice, deleteVoice } from "../utils/api.js";
+import { voiceDisplayName } from "../utils/format.js";
 
 const CONSENT_LABEL =
   "Saya menyatakan bahwa suara yang saya unggah atau rekam adalah suara saya sendiri, atau saya memiliki izin resmi dari pemilik suara untuk membuat voice clone.";
@@ -102,7 +103,7 @@ export default function CreateVoiceSection({
         sourceType: tab
       });
       setSuccess(
-        `Voice clone "${result.data.name}" berhasil dibuat. Klik avatarnya di daftar bawah untuk mendengar sampel.`
+        `Voice clone "${voiceDisplayName(result.data.name)}" berhasil dibuat. Klik avatarnya di daftar bawah untuk mendengar sampel.`
       );
       setVoiceName("");
       setConsent(false);
@@ -145,7 +146,7 @@ export default function CreateVoiceSection({
   async function handleDeleteVoice(voiceId, name) {
     if (
       !window.confirm(
-        `Hapus voice "${name}" beserta seluruh audio hasil generate-nya? Pada Live Mode, voice juga akan dihapus dari ElevenLabs.`
+        `Hapus voice "${voiceDisplayName(name)}" beserta seluruh audio hasil generate-nya? Pada Live Mode, voice juga akan dihapus dari ElevenLabs.`
       )
     ) {
       return;
@@ -180,14 +181,14 @@ export default function CreateVoiceSection({
             className={`tab-btn ${tab === "record" ? "active" : ""}`}
             onClick={() => setTab("record")}
           >
-            🎙 Rekam langsung
+            Rekam langsung
           </button>
           <button
             type="button"
             className={`tab-btn ${tab === "upload" ? "active" : ""}`}
             onClick={() => setTab("upload")}
           >
-            📁 Unggah audio
+            Unggah audio
           </button>
         </div>
 
@@ -236,10 +237,15 @@ export default function CreateVoiceSection({
             id="voice-name"
             className="text-input"
             type="text"
-            placeholder="contoh: Suara Saya"
+            placeholder="contoh: Dani"
             value={voiceName}
             onChange={(event) => setVoiceName(event.target.value)}
           />
+          {voiceName.trim() && (
+            <div className="hint-preview">
+              Akan disimpan sebagai: "{voiceDisplayName(voiceName.trim())}"
+            </div>
+          )}
         </div>
 
         <label className="consent-row">
@@ -253,11 +259,11 @@ export default function CreateVoiceSection({
         </label>
 
         <button type="button" className="cta purple" disabled={!canSubmit} onClick={handleSubmit}>
-          {submitting ? "Membuat voice clone…" : "✨ Create voice clone"}
+          {submitting ? "Membuat voice clone…" : "Create voice clone"}
         </button>
 
         {error && <div className="error-box">{error}</div>}
-        {success && <div className="success-box">✓ {success}</div>}
+        {success && <div className="success-box">{success}</div>}
       </div>
 
       {voices.length > 0 && (
@@ -282,7 +288,7 @@ export default function CreateVoiceSection({
                   {playing ? "❚❚" : voice.name.charAt(0).toUpperCase()}
                 </button>
                 <div className="voice-info">
-                  <div className="voice-name">{voice.name}</div>
+                  <div className="voice-name">{voiceDisplayName(voice.name)}</div>
                   <div className="voice-meta">
                     {voice.source_type === "record" ? "Rekaman browser" : "Upload file"} ·{" "}
                     {formatVoiceDate(voice.created_at)}

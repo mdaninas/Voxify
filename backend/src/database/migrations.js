@@ -69,6 +69,31 @@ export const migrations = [
       );
       db.exec("CREATE INDEX IF NOT EXISTS idx_generated_audios_voice_id ON generated_audios(voice_id)");
     }
+  },
+  {
+    version: 4,
+    name: "users-and-ownership",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS users (
+          id TEXT PRIMARY KEY,
+          google_sub TEXT UNIQUE,
+          email TEXT,
+          name TEXT,
+          picture TEXT,
+          created_at TEXT NOT NULL,
+          last_login_at TEXT
+        )
+      `);
+      if (!columnExists(db, "voices", "user_id")) {
+        db.exec("ALTER TABLE voices ADD COLUMN user_id TEXT");
+      }
+      if (!columnExists(db, "generated_audios", "user_id")) {
+        db.exec("ALTER TABLE generated_audios ADD COLUMN user_id TEXT");
+      }
+      db.exec("CREATE INDEX IF NOT EXISTS idx_voices_user_id ON voices(user_id)");
+      db.exec("CREATE INDEX IF NOT EXISTS idx_generated_audios_user_id ON generated_audios(user_id)");
+    }
   }
 ];
 

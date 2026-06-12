@@ -7,9 +7,11 @@ import config, { ensureDirectories } from "./config.js";
 import { getDb } from "./database/db.js";
 import { errorResponse, AppError } from "./utils/errors.js";
 import healthRouter from "./routes/health.js";
+import authRouter from "./routes/auth.js";
 import voicesRouter from "./routes/voices.js";
 import speechRouter from "./routes/speech.js";
 import audiosRouter from "./routes/audios.js";
+import { requireAuth } from "./middleware/requireAuth.js";
 import { migrateDemoAudioPlaceholders } from "./utils/demoMigration.js";
 import { startMaintenanceSchedule } from "./utils/storageMaintenance.js";
 
@@ -61,9 +63,10 @@ export function createApp() {
   );
 
   app.use("/api/health", healthRouter);
-  app.use("/api/voices", voicesRouter);
-  app.use("/api/speech", speechRouter);
-  app.use("/api/audios", audiosRouter);
+  app.use("/api/auth", authRouter);
+  app.use("/api/voices", requireAuth, voicesRouter);
+  app.use("/api/speech", requireAuth, speechRouter);
+  app.use("/api/audios", requireAuth, audiosRouter);
 
   app.use((req, res) => {
     errorResponse(res, new AppError("VALIDATION_ERROR", "Endpoint tidak ditemukan.", 404));

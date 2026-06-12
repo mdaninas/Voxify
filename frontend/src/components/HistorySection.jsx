@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { deleteAudio } from "../utils/api.js";
+import { voiceDisplayName } from "../utils/format.js";
 
 const FILL_COLORS = ["#f4458e", "#5b3df5", "#ffb43a", "#00a87e"];
 const PASTEL_SHADOWS = ["#d8ccf8", "#fbc7dd", "#b8f0d8", "#ffe2b0"];
@@ -129,7 +130,9 @@ export default function HistorySection({ audios, onAudiosChanged }) {
               >
                 <div className="history-meta-row">
                   <div className="history-meta">
-                    <strong>{audio.voice_name || "Voice terhapus"}</strong>
+                    <strong>
+                      {audio.voice_name ? voiceDisplayName(audio.voice_name) : "Voice terhapus"}
+                    </strong>
                     <span className="muted">
                       {" "}
                       · {formatHistoryDate(audio.created_at)} · {audio.character_count} karakter
@@ -137,7 +140,7 @@ export default function HistorySection({ audios, onAudiosChanged }) {
                   </div>
                   <div className="history-actions">
                     <a className="mini-btn download" href={audio.download_url}>
-                      ⬇ Download
+                      Download
                     </a>
                     <button
                       type="button"

@@ -11,22 +11,28 @@ import { validateUploadedAudio } from "../utils/audioValidation.js";
 
 const router = Router();
 
-const PREVIEW_TEXT = "Halo, ini adalah hasil clone suara kamu. Suara ini siap dipakai untuk membaca teks.";
-
 const PREVIEW_MIME = {
   ".mp3": "audio/mpeg",
   ".wav": "audio/wav"
 };
 
-async function generateVoicePreview(voiceId, providerVoiceId) {
+function voiceDisplayName(name) {
+  return `Suara cloning milik ${name}`;
+}
+
+function previewText(name) {
+  return `Halo, ini adalah suara cloning milik ${name}. Suara ini siap dipakai untuk membaca teks.`;
+}
+
+async function generateVoicePreview(voiceId, providerVoiceId, name) {
   try {
     let buffer;
     let ext;
     if (config.demoMode) {
-      buffer = generateDemoMp3(PREVIEW_TEXT, 5);
+      buffer = generateDemoMp3(previewText(name), 5);
       ext = ".mp3";
     } else {
-      buffer = await textToSpeech(providerVoiceId, PREVIEW_TEXT);
+      buffer = await textToSpeech(providerVoiceId, previewText(name));
       ext = ".mp3";
     }
     const previewPath = path.join(config.previewsDir, `voice-preview-${voiceId}${ext}`);
@@ -81,6 +87,15 @@ router.post("/", uploadMiddleware, async (req, res) => {
     if (!name) {
       throw new AppError("VALIDATION_ERROR", "Nama voice wajib diisi.");
     }
+    const duplicate = getDb()
+      .prepare("SELECT id FROM voices WHERE LOWER(name) = LOWER(?) AND user_id = ?")
+      .get(name, req.user.id);
+    if (duplicate) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        `Nama "${name}" sudah dipakai voice lain. Gunakan nama yang unik.`
+      );
+    }
     if (!consentAccepted) {
       throw new AppError("CONSENT_REQUIRED", "Consent wajib disetujui sebelum membuat voice clone.");
     }
@@ -105,14 +120,14 @@ router.post("/", uploadMiddleware, async (req, res) => {
       providerVoiceId = `demo_voice_${voiceId.slice(0, 8)}`;
     } else {
       try {
-        providerVoiceId = await createInstantVoiceClone(name, samplePath);
+        providerVoiceId = await createInstantVoiceClone(voiceDisplayName(name), samplePath);
       } catch (err) {
         await fs.promises.unlink(samplePath).catch(() => {});
         throw err;
       }
     }
 
-    const previewPath = await generateVoicePreview(voiceId, providerVoiceId);
+    const previewPath = await generateVoicePreview(voiceId, providerVoiceId, name);
 
     const now = new Date().toISOString();
     getDb()
@@ -120,8 +135,8 @@ router.post("/", uploadMiddleware, async (req, res) => {
         `INSERT INTO voices
           (id, provider, provider_voice_id, name, sample_audio_path, source_type,
            consent_accepted, consent_text, consent_accepted_at, status, created_at, updated_at,
-           preview_audio_path)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           preview_audio_path, user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         voiceId,
@@ -136,7 +151,8 @@ router.post("/", uploadMiddleware, async (req, res) => {
         "ready",
         now,
         now,
-        previewPath
+        previewPath,
+        req.user.id
       );
 
     logEvent("voice_created", `Voice clone dibuat: ${name}`, {
@@ -168,9 +184,9 @@ router.get("/", (req, res) => {
   try {
     const rows = getDb()
       .prepare(
-        "SELECT id, name, provider, source_type, status, created_at, preview_audio_path FROM voices ORDER BY created_at DESC"
+        "SELECT id, name, provider, source_type, status, created_at, preview_audio_path FROM voices WHERE user_id = ? ORDER BY created_at DESC"
       )
-      .all();
+      .all(req.user.id);
     const data = rows.map(({ preview_audio_path: previewPath, ...row }) => ({
       ...row,
       preview_url: previewPath ? `/api/voices/${row.id}/preview` : null
@@ -184,8 +200,8 @@ router.get("/", (req, res) => {
 router.get("/:voiceId/preview", (req, res) => {
   try {
     const voice = getDb()
-      .prepare("SELECT preview_audio_path FROM voices WHERE id = ?")
-      .get(req.params.voiceId);
+      .prepare("SELECT preview_audio_path FROM voices WHERE id = ? AND user_id = ?")
+      .get(req.params.voiceId, req.user.id);
     if (!voice) {
       throw new AppError("VOICE_NOT_FOUND", "Voice tidak ditemukan.", 404);
     }
@@ -205,7 +221,9 @@ router.delete("/:voiceId", async (req, res) => {
     const { voiceId } = req.params;
     const deleteProvider = String(req.query.delete_provider || "").toLowerCase() === "true";
 
-    const voice = getDb().prepare("SELECT * FROM voices WHERE id = ?").get(voiceId);
+    const voice = getDb()
+      .prepare("SELECT * FROM voices WHERE id = ? AND user_id = ?")
+      .get(voiceId, req.user.id);
     if (!voice) {
       throw new AppError("VOICE_NOT_FOUND", "Voice tidak ditemukan.", 404);
     }

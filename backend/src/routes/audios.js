@@ -10,15 +10,15 @@ const MIME_BY_FORMAT = {
   wav: "audio/wav"
 };
 
-function findAudio(audioId) {
+function findAudio(audioId, userId) {
   const audio = getDb()
     .prepare(
       `SELECT ga.*, v.name AS voice_name
        FROM generated_audios ga
        LEFT JOIN voices v ON v.id = ga.voice_id
-       WHERE ga.id = ?`
+       WHERE ga.id = ? AND ga.user_id = ?`
     )
-    .get(audioId);
+    .get(audioId, userId);
   if (!audio) {
     throw new AppError("AUDIO_NOT_FOUND", "Audio tidak ditemukan.", 404);
   }
@@ -33,9 +33,10 @@ router.get("/", (req, res) => {
                 v.name AS voice_name
          FROM generated_audios ga
          LEFT JOIN voices v ON v.id = ga.voice_id
+         WHERE ga.user_id = ?
          ORDER BY ga.created_at DESC`
       )
-      .all();
+      .all(req.user.id);
     const data = rows.map((row) => ({
       ...row,
       audio_url: `/api/audios/${row.id}/file`,
@@ -49,7 +50,7 @@ router.get("/", (req, res) => {
 
 router.get("/:audioId/file", (req, res) => {
   try {
-    const audio = findAudio(req.params.audioId);
+    const audio = findAudio(req.params.audioId, req.user.id);
     if (!fs.existsSync(audio.audio_path)) {
       throw new AppError("AUDIO_NOT_FOUND", "File audio tidak ditemukan di storage.", 404);
     }
@@ -62,7 +63,7 @@ router.get("/:audioId/file", (req, res) => {
 
 router.get("/:audioId/download", (req, res) => {
   try {
-    const audio = findAudio(req.params.audioId);
+    const audio = findAudio(req.params.audioId, req.user.id);
     if (!fs.existsSync(audio.audio_path)) {
       throw new AppError("AUDIO_NOT_FOUND", "File audio tidak ditemukan di storage.", 404);
     }
@@ -76,7 +77,7 @@ router.get("/:audioId/download", (req, res) => {
 
 router.delete("/:audioId", async (req, res) => {
   try {
-    const audio = findAudio(req.params.audioId);
+    const audio = findAudio(req.params.audioId, req.user.id);
     await fs.promises.unlink(audio.audio_path).catch(() => {});
     getDb().prepare("DELETE FROM generated_audios WHERE id = ?").run(audio.id);
     logEvent("audio_deleted", "Audio dihapus.", { audioId: audio.id });

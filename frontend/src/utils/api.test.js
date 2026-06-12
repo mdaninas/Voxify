@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createVoice, deleteAudio, deleteVoice, generateSpeech, getHealth } from "./api.js";
+import {
+  createVoice,
+  deleteAudio,
+  deleteVoice,
+  generateSpeech,
+  getAuthConfig,
+  getHealth,
+  loginWithGoogle,
+  logout
+} from "./api.js";
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -29,6 +38,9 @@ test("api client sends expected requests", async () => {
     await deleteAudio("audio-1");
     await deleteVoice("voice-1");
     await deleteVoice("voice-2", { deleteProvider: false });
+    await getAuthConfig();
+    await loginWithGoogle("google-credential");
+    await logout();
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -57,6 +69,15 @@ test("api client sends expected requests", async () => {
 
   assert.equal(calls[5].url, "/api/voices/voice-2?delete_provider=false");
   assert.equal(calls[5].options.method, "DELETE");
+
+  assert.equal(calls[6].url, "/api/auth/config");
+
+  assert.equal(calls[7].url, "/api/auth/google");
+  assert.equal(calls[7].options.method, "POST");
+  assert.deepEqual(JSON.parse(calls[7].options.body), { credential: "google-credential" });
+
+  assert.equal(calls[8].url, "/api/auth/logout");
+  assert.equal(calls[8].options.method, "POST");
 });
 
 test("api client exposes backend error messages and codes", async () => {
