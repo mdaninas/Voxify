@@ -794,6 +794,10 @@ select:focus {
   padding: 96px 0 0;
 }
 
+.studio-only-section {
+  padding-top: 52px;
+}
+
 .studio-heading {
   margin-bottom: 34px;
 }
@@ -818,6 +822,15 @@ select:focus {
 
 .final-cta h2 {
   font-size: 38px;
+}
+
+.login-final-cta {
+  align-items: center;
+}
+
+.login-final-cta .login-card {
+  flex: 0 0 min(420px, 100%);
+  box-shadow: 6px 6px 0 var(--pastel-purple);
 }
 
 .hero {
