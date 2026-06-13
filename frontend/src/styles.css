@@ -267,29 +267,67 @@ select:focus {
   gap: 10px;
 }
 
-.theme-toggle {
+.header-controls {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.theme-toggle:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.theme-toggle:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.theme-toggle svg {
+  display: block;
+}
+
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
   border: 2px solid var(--ink);
   border-radius: 999px;
   background: var(--bg-card);
-  color: var(--ink);
-  font-family: "Schibsted Grotesk", sans-serif;
-  font-size: 13px;
-  font-weight: 800;
-  padding: 8px 13px;
+  padding: 3px;
   cursor: pointer;
-  box-shadow: 3px 3px 0 var(--pastel-yellow);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: "Bricolage Grotesque", sans-serif;
 }
 
-.theme-toggle-dot {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--ink);
+.lang-toggle span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  padding: 4px 9px;
   border-radius: 999px;
-  background: var(--yellow);
-  box-shadow: inset -4px -2px 0 var(--purple);
+  line-height: 1;
+}
+
+.lang-toggle span.active {
+  background: var(--ink);
+  color: var(--cream);
 }
 
 .login-wrap {

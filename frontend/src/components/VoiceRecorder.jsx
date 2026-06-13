@@ -1,8 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-const RECORDING_SCRIPT = `Saya menyatakan bahwa ini suara saya sendiri dan saya mengizinkan aplikasi ini membuat versi sintetis dari suara saya.
-
-Halo, saya sedang merekam suara untuk membuat profil suara pribadi. Saya berbicara dengan jelas, santai, dan alami. Satu, dua, tiga, mari kita mulai.`;
+import { useI18n } from "../utils/i18n.jsx";
 
 const DEFAULT_MIN_SECONDS = 10;
 const MAX_SECONDS = 30;
@@ -16,6 +13,7 @@ function formatTimer(totalSeconds) {
 }
 
 export default function VoiceRecorder({ recordedBlob, onRecorded, minSeconds = DEFAULT_MIN_SECONDS }) {
+  const { t } = useI18n();
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [recError, setRecError] = useState("");
@@ -95,9 +93,7 @@ export default function VoiceRecorder({ recordedBlob, onRecorded, minSeconds = D
         stream.getTracks().forEach((track) => track.stop());
         stopVisualizer();
         if (secondsRef.current < minSeconds) {
-          setRecError(
-            `Rekaman terlalu pendek (${secondsRef.current} detik). Minimal ${minSeconds} detik, silakan rekam ulang.`
-          );
+          setRecError(t("recorder.tooShort", { sec: secondsRef.current, min: minSeconds }));
           setSeconds(0);
           secondsRef.current = 0;
           return;
@@ -121,9 +117,7 @@ export default function VoiceRecorder({ recordedBlob, onRecorded, minSeconds = D
         }
       }, 1000);
     } catch {
-      setRecError(
-        "Akses microphone ditolak atau tidak tersedia. Izinkan akses microphone di browser lalu coba lagi."
-      );
+      setRecError(t("recorder.micDenied"));
     }
   }
 
@@ -144,14 +138,14 @@ export default function VoiceRecorder({ recordedBlob, onRecorded, minSeconds = D
   }
 
   const statusLabel = recording
-    ? "Merekam… klik untuk berhenti"
+    ? t("recorder.recording")
     : recordedBlob
-      ? "Rekaman tersimpan. Klik untuk rekam ulang"
-      : "Klik untuk mulai merekam";
+      ? t("recorder.saved")
+      : t("recorder.idle");
 
   return (
     <div className="record-panel">
-      <div className="script-quote">{RECORDING_SCRIPT}</div>
+      <div className="script-quote">{t("recorder.script")}</div>
       <button
         type="button"
         className={`rec-button ${recording ? "recording" : ""}`}
@@ -173,10 +167,7 @@ export default function VoiceRecorder({ recordedBlob, onRecorded, minSeconds = D
       </div>
       <div className="rec-label">{statusLabel}</div>
       <div className={`rec-timer ${recording ? "active" : ""}`}>{formatTimer(seconds)}</div>
-      <div className="rec-hint">
-        Durasi {minSeconds}-{MAX_SECONDS} detik (berhenti otomatis di {MAX_SECONDS} detik), satu
-        pembicara, tanpa musik latar keras.
-      </div>
+      <div className="rec-hint">{t("recorder.hint", { min: minSeconds, max: MAX_SECONDS })}</div>
       {previewUrl && !recording && <audio className="recorded-audio" controls src={previewUrl} />}
       {recError && <div className="error-box">{recError}</div>}
     </div>

@@ -3,10 +3,9 @@ import CreateVoiceSection from "./components/CreateVoiceSection.jsx";
 import GenerateSection from "./components/GenerateSection.jsx";
 import HistorySection from "./components/HistorySection.jsx";
 import LoginPage from "./components/LoginPage.jsx";
+import HeaderControls from "./components/HeaderControls.jsx";
 import { getHealth, listVoices, listAudios, getAuthConfig, getMe, logout } from "./utils/api.js";
-
-const DISCLAIMER =
-  "Gunakan hanya suara milik sendiri atau suara yang sudah mendapat izin. Jangan gunakan aplikasi ini untuk meniru orang lain tanpa izin, penipuan, ancaman, fitnah, atau aktivitas ilegal.";
+import { useI18n } from "./utils/i18n.jsx";
 
 const THEME_STORAGE_KEY = "voxify-theme";
 
@@ -24,11 +23,12 @@ function getInitialTheme() {
 }
 
 export default function App() {
+  const { t } = useI18n();
   const [auth, setAuth] = useState({ status: "loading", user: null, clientId: null });
   const [health, setHealth] = useState(null);
   const [voices, setVoices] = useState([]);
   const [audios, setAudios] = useState([]);
-  const [backendError, setBackendError] = useState("");
+  const [backendError, setBackendError] = useState(false);
   const [theme, setTheme] = useState(getInitialTheme);
 
   useEffect(() => {
@@ -74,9 +74,7 @@ export default function App() {
         setAuth({ status: "anon", user: null, clientId });
       }
     } catch {
-      setBackendError(
-        "Tidak dapat terhubung ke backend. Pastikan server backend berjalan di port 8000."
-      );
+      setBackendError(true);
       setAuth({ status: "error", user: null, clientId: null });
     }
   }, [loadAppData]);
@@ -99,7 +97,7 @@ export default function App() {
     return (
       <div className="page page-state">
         <div className="login-wrap">
-          <p className="login-sub">Memuat...</p>
+          <p className="login-sub">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -109,7 +107,7 @@ export default function App() {
     return (
       <div className="page page-state">
         <div className="login-wrap">
-          <div className="error-box">{backendError}</div>
+          <div className="error-box">{t("common.backendError")}</div>
         </div>
       </div>
     );
@@ -141,20 +139,12 @@ export default function App() {
         </div>
 
         <div className="top-bar-right">
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
-          >
-            <span className="theme-toggle-dot" />
-            {theme === "dark" ? "Terang" : "Gelap"}
-          </button>
+          <HeaderControls theme={theme} onThemeToggle={toggleTheme} />
           {health &&
             (health.demo_mode ? (
-              <div className="mode-pill">Demo Mode</div>
+              <div className="mode-pill">{t("common.demoMode")}</div>
             ) : (
-              <div className="mode-pill live">Live AI</div>
+              <div className="mode-pill live">{t("common.liveAI")}</div>
             ))}
           {auth.status === "authed" && auth.user && (
             <div className="user-chip">
@@ -168,7 +158,7 @@ export default function App() {
               )}
               <span className="user-name">{auth.user.name || auth.user.email}</span>
               <button type="button" className="chip-btn small" onClick={handleLogout}>
-                Keluar
+                {t("common.logout")}
               </button>
             </div>
           )}
@@ -177,22 +167,21 @@ export default function App() {
 
       <section id="studio" className="studio-section studio-only-section">
         <div className="section-heading studio-heading">
-          <span className="section-kicker">Studio</span>
-          <h2>Mulai dari suara kamu sendiri.</h2>
-          <p>
-            Buat voice clone, generate speech, lalu kelola history audio dari studio yang sama.
-          </p>
+          <span className="section-kicker">{t("studio.kicker")}</span>
+          <h2>{t("studio.title")}</h2>
+          <p>{t("studio.subtitle")}</p>
         </div>
 
         {health?.demo_mode && (
           <div className="demo-banner">
-            <strong>Demo Mode aktif.</strong> Hasil audio hanya nada placeholder, bukan suara clone
-            asli. Isi <span className="env-chip">ELEVENLABS_API_KEY</span> di backend untuk hasil
-            sungguhan.
+            <strong>{t("demoBanner.strong")}</strong>
+            {t("demoBanner.before")}
+            <span className="env-chip">ELEVENLABS_API_KEY</span>
+            {t("demoBanner.after")}
           </div>
         )}
 
-        {backendError && <div className="error-box">{backendError}</div>}
+        {backendError && <div className="error-box">{t("common.backendError")}</div>}
 
         <main className="app-layout">
           <div className="primary-column">
@@ -220,7 +209,7 @@ export default function App() {
       </section>
 
       <footer className="footer">
-        <div className="footer-disclaimer">{DISCLAIMER}</div>
+        <div className="footer-disclaimer">{t("disclaimer")}</div>
       </footer>
     </div>
   );

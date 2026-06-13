@@ -1,45 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { loginWithGoogle } from "../utils/api.js";
+import { useI18n } from "../utils/i18n.jsx";
+import HeaderControls from "./HeaderControls.jsx";
 
 const GSI_SCRIPT_URL = "https://accounts.google.com/gsi/client";
 let googleClientId = "";
 let googleClientInitialized = false;
 let googleCredentialCallback = null;
 
-const WORKFLOW_STEPS = [
-  {
-    number: "01",
-    title: "Rekam",
-    text: "Rekam langsung atau unggah sampel suara milikmu sendiri dengan izin yang jelas."
-  },
-  {
-    number: "02",
-    title: "Generate",
-    text: "Tulis naskah, pilih voice, lalu ubah teks menjadi audio di studio."
-  },
-  {
-    number: "03",
-    title: "Download",
-    text: "Putar hasilnya, simpan history, dan download file MP3 untuk kebutuhanmu."
-  }
-];
-
-const SAFETY_POINTS = [
-  {
-    title: "Persetujuan adalah kunci",
-    text: "Setiap voice clone harus dibuat dari suara sendiri atau suara yang sudah mendapat izin."
-  },
-  {
-    title: "Data akun terhubung",
-    text: "Login membantu memisahkan voice dan history audio berdasarkan akun pengguna."
-  },
-  {
-    title: "Kontrol penghapusan",
-    text: "Voice clone dan audio hasil generate bisa dihapus saat sudah tidak diperlukan."
-  }
-];
-
-function LandingPreview() {
+function LandingPreview({ t }) {
   const bars = [24, 42, 30, 56, 36, 68, 46, 28, 52, 34, 60, 40];
 
   return (
@@ -52,12 +21,12 @@ function LandingPreview() {
       </div>
       <div className="preview-grid">
         <div className="preview-panel voice-panel">
-          <div className="preview-label">Voice ready</div>
+          <div className="preview-label">{t("login.preview.voiceReady")}</div>
           <div className="preview-voice-row">
             <div className="preview-avatar">D</div>
             <div>
-              <strong>Suara cloning milik Dani</strong>
-              <span>Sample bersinyal - consent aktif</span>
+              <strong>{t("common.voiceName", { name: "Dani" })}</strong>
+              <span>{t("login.preview.sampleStatus")}</span>
             </div>
           </div>
           <div className="preview-wave">
@@ -68,19 +37,19 @@ function LandingPreview() {
         </div>
 
         <div className="preview-panel generate-panel">
-          <div className="preview-label">Generate speech</div>
-          <p>"Halo, ini suara saya untuk narasi produk baru."</p>
+          <div className="preview-label">{t("login.preview.generate")}</div>
+          <p>{t("login.preview.quote")}</p>
           <div className="preview-progress">
             <span />
           </div>
-          <button type="button">Download MP3</button>
+          <button type="button">{t("login.preview.download")}</button>
         </div>
       </div>
       <div className="preview-consent">
         <span>OK</span>
         <div>
-          <strong>Consent aktif</strong>
-          <p>Voice dibuat dari suara sendiri atau suara yang sudah mendapat izin.</p>
+          <strong>{t("login.preview.consentTitle")}</strong>
+          <p>{t("login.preview.consentText")}</p>
         </div>
       </div>
     </div>
@@ -88,11 +57,13 @@ function LandingPreview() {
 }
 
 export default function LoginPage({ clientId, theme, onThemeToggle, onLoggedIn }) {
+  const { t, tRaw } = useI18n();
   const buttonRef = useRef(null);
   const hasRenderedGoogleButtonRef = useRef(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const isDarkTheme = theme === "dark";
+  const workflowSteps = tRaw("login.workflowSteps") || [];
+  const safetyPoints = tRaw("login.safetyPoints") || [];
 
   function handleAnchorClick(event) {
     const href = event.currentTarget.getAttribute("href");
@@ -172,7 +143,7 @@ export default function LoginPage({ clientId, theme, onThemeToggle, onLoggedIn }
 
     function handleScriptError() {
       if (!cancelled) {
-        setError("Gagal memuat layanan login Google. Periksa koneksi internet.");
+        setError(t("login.scriptError"));
       }
     }
 
@@ -219,59 +190,48 @@ export default function LoginPage({ clientId, theme, onThemeToggle, onLoggedIn }
           <div className="wordmark">Voxify</div>
         </div>
         <nav className="main-nav" aria-label="Navigasi landing">
-          <a href="#workflow" onClick={handleAnchorClick}>Cara kerja</a>
-          <a href="#safety" onClick={handleAnchorClick}>Keamanan</a>
-          <a href="#login" onClick={handleAnchorClick}>Masuk</a>
+          <a href="#workflow" onClick={handleAnchorClick}>{t("nav.workflow")}</a>
+          <a href="#safety" onClick={handleAnchorClick}>{t("nav.safety")}</a>
+          <a href="#login" onClick={handleAnchorClick}>{t("nav.login")}</a>
         </nav>
         <div className="header-actions">
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={onThemeToggle}
-            aria-label={isDarkTheme ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
-          >
-            <span className="theme-toggle-dot" />
-            {isDarkTheme ? "Terang" : "Gelap"}
-          </button>
+          <HeaderControls theme={theme} onThemeToggle={onThemeToggle} />
           <a className="header-cta" href="#login" onClick={handleAnchorClick}>
-            Masuk
+            {t("login.headerCta")}
           </a>
         </div>
       </header>
 
       <main className="login-hero">
         <section className="login-copy">
-          <h1>Clone suaramu. Generate audio dengan kontrol penuh.</h1>
-          <p>
-            Masuk untuk membuat voice clone dari suara sendiri, menulis naskah, dan menyimpan
-            hasil audio sebagai MP3.
-          </p>
+          <h1>{t("login.heroTitle")}</h1>
+          <p>{t("login.heroText")}</p>
           <div className="hero-actions">
             <a className="primary-link" href="#login" onClick={handleAnchorClick}>
-              Masuk ke studio
+              {t("login.primaryCta")}
             </a>
             <a className="secondary-link" href="#workflow" onClick={handleAnchorClick}>
-              Lihat cara kerja
+              {t("login.secondaryCta")}
             </a>
           </div>
           <div className="login-highlights">
-            <span>Consent wajib</span>
-            <span>History privat</span>
-            <span>Download MP3</span>
+            {(tRaw("login.highlights") || []).map((item) => (
+              <span key={item}>{item}</span>
+            ))}
           </div>
         </section>
 
-        <LandingPreview />
+        <LandingPreview t={t} />
       </main>
 
       <section id="workflow" className="landing-section workflow-section">
         <div className="section-heading">
-          <span className="section-kicker">Cara kerja</span>
-          <h2>Dari sampel suara ke audio siap pakai.</h2>
-          <p>Landing page menjelaskan produknya. Setelah masuk, kamu langsung dibawa ke Studio.</p>
+          <span className="section-kicker">{t("login.workflowKicker")}</span>
+          <h2>{t("login.workflowTitle")}</h2>
+          <p>{t("login.workflowText")}</p>
         </div>
         <div className="workflow-grid">
-          {WORKFLOW_STEPS.map((step) => (
+          {workflowSteps.map((step) => (
             <article className="workflow-card" key={step.number}>
               <div className="workflow-number">{step.number}</div>
               <h3>{step.title}</h3>
@@ -283,15 +243,12 @@ export default function LoginPage({ clientId, theme, onThemeToggle, onLoggedIn }
 
       <section id="safety" className="landing-section safety-section">
         <div className="safety-copy">
-          <span className="section-kicker">Keamanan</span>
-          <h2>Voice clone harus aman, jelas, dan berizin.</h2>
-          <p>
-            Voxify menaruh consent dan kontrol data sebagai bagian utama alur, bukan catatan kecil
-            di belakang.
-          </p>
+          <span className="section-kicker">{t("login.safetyKicker")}</span>
+          <h2>{t("login.safetyTitle")}</h2>
+          <p>{t("login.safetyText")}</p>
         </div>
         <div className="safety-grid">
-          {SAFETY_POINTS.map((point) => (
+          {safetyPoints.map((point) => (
             <article className="safety-card" key={point.title}>
               <h3>{point.title}</h3>
               <p>{point.text}</p>
@@ -302,13 +259,13 @@ export default function LoginPage({ clientId, theme, onThemeToggle, onLoggedIn }
 
       <section id="login" className="final-cta login-final-cta">
         <div className="login-final-copy">
-          <span className="section-kicker">Akses Studio</span>
-          <h2>Masuk dan langsung mulai dari Studio.</h2>
-          <p>Setelah login, halaman berikutnya fokus ke pembuatan voice, generate speech, dan history audio.</p>
-          <div className="login-cta-points" aria-label="Fitur studio setelah login">
-            <span>Studio bersih</span>
-            <span>Data per akun</span>
-            <span>History audio</span>
+          <span className="section-kicker">{t("login.finalKicker")}</span>
+          <h2>{t("login.finalTitle")}</h2>
+          <p>{t("login.finalText")}</p>
+          <div className="login-cta-points" aria-label={t("login.finalKicker")}>
+            {(tRaw("login.finalPoints") || []).map((item) => (
+              <span key={item}>{item}</span>
+            ))}
           </div>
         </div>
         <section className="login-card" aria-label="Login Voxify">
@@ -322,19 +279,14 @@ export default function LoginPage({ clientId, theme, onThemeToggle, onLoggedIn }
             </div>
             <div>
               <div className="wordmark">Voxify</div>
-              <p className="login-sub">Voice studio pribadi</p>
+              <p className="login-sub">{t("login.cardTagline")}</p>
             </div>
           </div>
-          <p className="login-sub">
-            Gunakan akun Google untuk membuka studio dan menjaga data voice tetap terhubung
-            ke akunmu.
-          </p>
+          <p className="login-sub">{t("login.cardText")}</p>
           <div className="gsi-slot" ref={buttonRef} />
-          {loading && <p className="login-sub">Memproses login...</p>}
+          {loading && <p className="login-sub">{t("login.processing")}</p>}
           {error && <div className="error-box">{error}</div>}
-          <p className="login-foot">
-            Gunakan hanya suara milik sendiri atau suara yang sudah mendapat izin.
-          </p>
+          <p className="login-foot">{t("login.cardFoot")}</p>
         </section>
       </section>
 
@@ -351,17 +303,17 @@ export default function LoginPage({ clientId, theme, onThemeToggle, onLoggedIn }
               </div>
               <div className="wordmark">Voxify</div>
             </div>
-            <p>Voice studio pribadi untuk membuat, mengelola, dan mengunduh audio dari suara yang berizin.</p>
+            <p>{t("login.footerText")}</p>
           </div>
           <nav className="footer-nav" aria-label="Navigasi footer">
-            <a href="#workflow" onClick={handleAnchorClick}>Cara kerja</a>
-            <a href="#safety" onClick={handleAnchorClick}>Keamanan</a>
-            <a href="#login" onClick={handleAnchorClick}>Masuk</a>
+            <a href="#workflow" onClick={handleAnchorClick}>{t("nav.workflow")}</a>
+            <a href="#safety" onClick={handleAnchorClick}>{t("nav.safety")}</a>
+            <a href="#login" onClick={handleAnchorClick}>{t("nav.login")}</a>
           </nav>
         </div>
         <div className="landing-footer-bottom">
-          <span>© 2026 Voxify.</span>
-          <span>Gunakan hanya suara milik sendiri atau suara yang sudah mendapat izin.</span>
+          <span>{t("login.footerCopyright")}</span>
+          <span>{t("login.footerDisclaimer")}</span>
         </div>
       </footer>
     </div>

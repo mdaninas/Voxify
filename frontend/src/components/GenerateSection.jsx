@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { generateSpeech } from "../utils/api.js";
-import { voiceDisplayName } from "../utils/format.js";
+import { useI18n } from "../utils/i18n.jsx";
 
 const DEFAULT_MAX_TEXT_LENGTH = 1000;
 
@@ -15,6 +15,7 @@ function formatTime(totalSeconds) {
 }
 
 export default function GenerateSection({ voices, maxTextLength, onGenerated }) {
+  const { t } = useI18n();
   const textLimit = maxTextLength || DEFAULT_MAX_TEXT_LENGTH;
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
   const [text, setText] = useState("");
@@ -96,7 +97,7 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
       };
       audio.onerror = () => {
         setPlaying(false);
-        setError("File audio gagal dimuat. Coba generate ulang.");
+        setError(t("generate.errAudioLoad"));
       };
       audioRef.current = audio;
     }
@@ -113,14 +114,14 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
     >
       <div className="step-header">
         <div className="step-badge pink">02</div>
-        <div className="step-title">Generate speech</div>
+        <div className="step-title">{t("generate.stepTitle")}</div>
         <div className="step-line pink" />
       </div>
 
       <div className="card shadow-pink gap-16">
         <div className="field">
           <label className="field-label" htmlFor="voice-select">
-            Pilih voice
+            {t("generate.voiceLabel")}
           </label>
           <select
             id="voice-select"
@@ -132,27 +133,25 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
             {hasVoices ? (
               voices.map((voice) => (
                 <option key={voice.id} value={voice.id}>
-                  {voiceDisplayName(voice.name)}
+                  {t("common.voiceName", { name: voice.name })}
                 </option>
               ))
             ) : (
-              <option value="">-- pilih voice clone --</option>
+              <option value="">{t("generate.voicePlaceholder")}</option>
             )}
           </select>
-          {!hasVoices && (
-            <div className="gen-hint">Belum ada voice. Buat voice clone dulu di langkah 01.</div>
-          )}
+          {!hasVoices && <div className="gen-hint">{t("generate.noVoiceHint")}</div>}
         </div>
 
         <div className="field">
           <label className="field-label" htmlFor="speech-text">
-            Teks
+            {t("generate.textLabel")}
           </label>
           <textarea
             id="speech-text"
             className="textarea-input"
             rows={5}
-            placeholder="Ketik teks yang ingin dibacakan oleh suara kamu…"
+            placeholder={t("generate.textPlaceholder")}
             value={text}
             disabled={!hasVoices}
             onChange={(event) => setText(event.target.value.slice(0, textLimit))}
@@ -161,10 +160,10 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
 
         <div className="gen-row">
           <div className={`char-counter ${charCount > textLimit * 0.9 ? "warn" : ""}`}>
-            {charCount} / {textLimit} karakter
+            {t("generate.counter", { count: charCount, limit: textLimit })}
           </div>
           <button type="button" className="cta pink" disabled={!canGenerate} onClick={handleGenerate}>
-            {generating ? "Menghasilkan…" : "Generate audio"}
+            {generating ? t("generate.submitting") : t("generate.submit")}
           </button>
         </div>
 
@@ -179,15 +178,20 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
               <span />
             </div>
             <div className="gen-status-text">
-              Memproses teks menjadi suara dengan{" "}
-              <strong>{selectedVoice ? voiceDisplayName(selectedVoice.name) : ""}</strong>…
+              {t("generate.processing", {
+                name: selectedVoice ? t("common.voiceName", { name: selectedVoice.name }) : ""
+              })}
             </div>
           </div>
         )}
 
         {result && !generating && (
           <div className="latest-card">
-            <div className="latest-label">Hasil terakhir · {voiceDisplayName(result.voice_name)}</div>
+            <div className="latest-label">
+              {t("generate.latest", {
+                name: t("common.voiceName", { name: result.voice_name })
+              })}
+            </div>
             <div className="latest-row">
               <button type="button" className="latest-play" onClick={togglePlay}>
                 {playing ? "❚❚" : "▶"}
@@ -211,7 +215,7 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
                 "{result.text.length > 70 ? result.text.slice(0, 70) + "…" : result.text}"
               </div>
               <a className="download-btn" href={result.download_url}>
-                Download {String(result.output_format || "mp3").toUpperCase()}
+                {t("common.download")} {String(result.output_format || "mp3").toUpperCase()}
               </a>
             </div>
           </div>

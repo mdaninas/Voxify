@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import VoiceRecorder from "./VoiceRecorder.jsx";
 import { createVoice, deleteVoice } from "../utils/api.js";
-import { voiceDisplayName } from "../utils/format.js";
-
-const CONSENT_LABEL =
-  "Saya menyatakan bahwa suara yang saya unggah atau rekam adalah suara saya sendiri, atau saya memiliki izin resmi dari pemilik suara untuk membuat voice clone.";
+import { useI18n } from "../utils/i18n.jsx";
 
 const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".m4a", ".webm"];
 const DEFAULT_MAX_UPLOAD_MB = 25;
@@ -13,13 +10,13 @@ const DEFAULT_MIN_SAMPLE_SECONDS = 10;
 const AVATAR_COLORS = ["#5b3df5", "#f4458e", "#00a87e", "#ffb43a"];
 const PASTEL_SHADOWS = ["#d8ccf8", "#fbc7dd", "#b8f0d8", "#ffe2b0"];
 
-function formatFileSize(bytes) {
+function formatFileSize(bytes, locale) {
   const mb = bytes / (1024 * 1024);
-  return mb.toLocaleString("id-ID", { maximumFractionDigits: 1 }) + " MB";
+  return mb.toLocaleString(locale, { maximumFractionDigits: 1 }) + " MB";
 }
 
-function formatVoiceDate(value) {
-  return new Date(value).toLocaleDateString("id-ID", {
+function formatVoiceDate(value, locale) {
+  return new Date(value).toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
     year: "numeric"
@@ -32,6 +29,7 @@ export default function CreateVoiceSection({
   minSampleSeconds,
   onVoicesChanged
 }) {
+  const { t, locale } = useI18n();
   const uploadLimitMb = maxUploadMb || DEFAULT_MAX_UPLOAD_MB;
   const minSeconds = minSampleSeconds || DEFAULT_MIN_SAMPLE_SECONDS;
   const [tab, setTab] = useState("record");
@@ -63,19 +61,19 @@ export default function CreateVoiceSection({
     }
     const ext = "." + (file.name.split(".").pop() || "").toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      setError(`Format file tidak didukung. Gunakan: ${ALLOWED_EXTENSIONS.join(", ")}.`);
+      setError(t("create.errUnsupported", { exts: ALLOWED_EXTENSIONS.join(", ") }));
       setUploadFile(null);
       event.target.value = "";
       return;
     }
     if (file.size > uploadLimitMb * 1024 * 1024) {
-      setError(`Ukuran file melebihi batas ${uploadLimitMb} MB.`);
+      setError(t("create.errTooLarge", { mb: uploadLimitMb }));
       setUploadFile(null);
       event.target.value = "";
       return;
     }
     if (file.size === 0) {
-      setError("File audio kosong.");
+      setError(t("create.errEmpty"));
       setUploadFile(null);
       event.target.value = "";
       return;
@@ -103,7 +101,7 @@ export default function CreateVoiceSection({
         sourceType: tab
       });
       setSuccess(
-        `Voice clone "${voiceDisplayName(result.data.name)}" berhasil dibuat. Klik avatarnya di daftar bawah untuk mendengar sampel.`
+        t("create.successMsg", { name: t("common.voiceName", { name: result.data.name }) })
       );
       setVoiceName("");
       setConsent(false);
@@ -136,7 +134,7 @@ export default function CreateVoiceSection({
     audio.onended = () => setPlayingVoiceId("");
     audio.onerror = () => {
       setPlayingVoiceId("");
-      setError("Preview suara gagal dimuat.");
+      setError(t("create.errPreviewLoad"));
     };
     previewAudioRef.current = audio;
     setPlayingVoiceId(voice.id);
@@ -146,7 +144,7 @@ export default function CreateVoiceSection({
   async function handleDeleteVoice(voiceId, name) {
     if (
       !window.confirm(
-        `Hapus voice "${voiceDisplayName(name)}" beserta seluruh audio hasil generate-nya? Pada Live Mode, voice juga akan dihapus dari ElevenLabs.`
+        t("create.deleteConfirm", { name: t("common.voiceName", { name }) })
       )
     ) {
       return;
@@ -170,7 +168,7 @@ export default function CreateVoiceSection({
     <section className="step">
       <div className="step-header">
         <div className="step-badge purple">01</div>
-        <div className="step-title">Buat voice clone</div>
+        <div className="step-title">{t("create.stepTitle")}</div>
         <div className="step-line purple" />
       </div>
 
@@ -181,14 +179,14 @@ export default function CreateVoiceSection({
             className={`tab-btn ${tab === "record" ? "active" : ""}`}
             onClick={() => setTab("record")}
           >
-            Rekam langsung
+            {t("create.tabRecord")}
           </button>
           <button
             type="button"
             className={`tab-btn ${tab === "upload" ? "active" : ""}`}
             onClick={() => setTab("upload")}
           >
-            Unggah audio
+            {t("create.tabUpload")}
           </button>
         </div>
 
@@ -212,17 +210,17 @@ export default function CreateVoiceSection({
                 <div className="file-info">
                   <div className="file-name">{uploadFile.name}</div>
                   <div className="drop-meta">
-                    {formatFileSize(uploadFile.size)} · klik untuk mengganti
+                    {formatFileSize(uploadFile.size, locale)} · {t("create.changeFile")}
                   </div>
                 </div>
               </div>
             ) : (
               <>
                 <div className="drop-title">
-                  Klik untuk <span className="drop-link">memilih file audio</span>
+                  {t("create.dropClick")} <span className="drop-link">{t("create.dropLink")}</span>
                 </div>
                 <div className="drop-meta">
-                  .mp3 / .wav / .m4a / .webm · maks {uploadLimitMb} MB · minimal {minSeconds} detik
+                  {t("create.dropMeta", { mb: uploadLimitMb, sec: minSeconds })}
                 </div>
               </>
             )}
@@ -231,19 +229,21 @@ export default function CreateVoiceSection({
 
         <div className="field">
           <label className="field-label" htmlFor="voice-name">
-            Nama voice
+            {t("create.nameLabel")}
           </label>
           <input
             id="voice-name"
             className="text-input"
             type="text"
-            placeholder="contoh: Dani"
+            placeholder={t("create.namePlaceholder")}
             value={voiceName}
             onChange={(event) => setVoiceName(event.target.value)}
           />
           {voiceName.trim() && (
             <div className="hint-preview">
-              Akan disimpan sebagai: "{voiceDisplayName(voiceName.trim())}"
+              {t("create.nameSavedAs", {
+                name: t("common.voiceName", { name: voiceName.trim() })
+              })}
             </div>
           )}
         </div>
@@ -255,11 +255,11 @@ export default function CreateVoiceSection({
             onChange={(event) => setConsent(event.target.checked)}
           />
           <div className={`consent-box ${consent ? "checked" : ""}`}>{consent ? "✓" : ""}</div>
-          <div className="consent-text">{CONSENT_LABEL}</div>
+          <div className="consent-text">{t("create.consent")}</div>
         </label>
 
         <button type="button" className="cta purple" disabled={!canSubmit} onClick={handleSubmit}>
-          {submitting ? "Membuat voice clone…" : "Create voice clone"}
+          {submitting ? t("create.submitting") : t("create.submit")}
         </button>
 
         {error && <div className="error-box">{error}</div>}
@@ -268,7 +268,7 @@ export default function CreateVoiceSection({
 
       {voices.length > 0 && (
         <div className="voice-list">
-          <div className="mini-label">VOICE CLONE TERSIMPAN</div>
+          <div className="mini-label">{t("create.savedVoices")}</div>
           {voices.map((voice, index) => {
             const playing = playingVoiceId === voice.id;
             return (
@@ -283,15 +283,17 @@ export default function CreateVoiceSection({
                   style={{ background: AVATAR_COLORS[index % AVATAR_COLORS.length] }}
                   disabled={!voice.preview_url}
                   onClick={() => togglePreview(voice)}
-                  title={voice.preview_url ? "Putar sampel suara" : "Preview tidak tersedia"}
+                  title={voice.preview_url ? t("create.playSample") : t("create.noPreview")}
                 >
                   {playing ? "❚❚" : voice.name.charAt(0).toUpperCase()}
                 </button>
                 <div className="voice-info">
-                  <div className="voice-name">{voiceDisplayName(voice.name)}</div>
+                  <div className="voice-name">{t("common.voiceName", { name: voice.name })}</div>
                   <div className="voice-meta">
-                    {voice.source_type === "record" ? "Rekaman browser" : "Upload file"} ·{" "}
-                    {formatVoiceDate(voice.created_at)}
+                    {voice.source_type === "record"
+                      ? t("create.sourceRecord")
+                      : t("create.sourceUpload")}{" "}
+                    · {formatVoiceDate(voice.created_at, locale)}
                   </div>
                 </div>
                 <button
@@ -300,7 +302,7 @@ export default function CreateVoiceSection({
                   disabled={deletingId === voice.id}
                   onClick={() => handleDeleteVoice(voice.id, voice.name)}
                 >
-                  {deletingId === voice.id ? "Menghapus…" : "Hapus"}
+                  {deletingId === voice.id ? t("common.deleting") : t("common.delete")}
                 </button>
               </div>
             );

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { deleteAudio } from "../utils/api.js";
-import { voiceDisplayName } from "../utils/format.js";
+import { useI18n } from "../utils/i18n.jsx";
 
 const FILL_COLORS = ["#f4458e", "#5b3df5", "#ffb43a", "#00a87e"];
 const PASTEL_SHADOWS = ["#d8ccf8", "#fbc7dd", "#b8f0d8", "#ffe2b0"];
@@ -21,8 +21,8 @@ function waveHeights(id) {
   });
 }
 
-function formatHistoryDate(value) {
-  return new Date(value).toLocaleString("id-ID", {
+function formatHistoryDate(value, locale) {
+  return new Date(value).toLocaleString(locale, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -36,6 +36,7 @@ function formatTime(totalSeconds) {
 }
 
 export default function HistorySection({ audios, onAudiosChanged }) {
+  const { t, locale } = useI18n();
   const [deletingId, setDeletingId] = useState("");
   const [error, setError] = useState("");
   const [playingId, setPlayingId] = useState("");
@@ -75,7 +76,7 @@ export default function HistorySection({ audios, onAudiosChanged }) {
     audio.onended = () => stopPlayback();
     audio.onerror = () => {
       stopPlayback();
-      setError("File audio gagal dimuat.");
+      setError(t("history.errAudioLoad"));
     };
     audioRef.current = audio;
     setPlayingId(item.id);
@@ -85,7 +86,7 @@ export default function HistorySection({ audios, onAudiosChanged }) {
   }
 
   async function handleDelete(audioId) {
-    if (!window.confirm("Hapus audio ini dari history?")) {
+    if (!window.confirm(t("history.deleteConfirm"))) {
       return;
     }
     if (playingId === audioId) {
@@ -107,17 +108,17 @@ export default function HistorySection({ audios, onAudiosChanged }) {
     <section className="step spaced">
       <div className="step-header">
         <div className="step-badge green">03</div>
-        <div className="step-title">History audio</div>
+        <div className="step-title">{t("history.stepTitle")}</div>
         <div className="step-line green" />
-        {audios.length > 0 && <div className="history-pill">{audios.length} audio</div>}
+        {audios.length > 0 && (
+          <div className="history-pill">{t("history.pill", { count: audios.length })}</div>
+        )}
       </div>
 
       {error && <div className="error-box">{error}</div>}
 
       {audios.length === 0 ? (
-        <div className="empty-dashed">
-          Belum ada audio yang dihasilkan. Hasil generate akan muncul di sini.
-        </div>
+        <div className="empty-dashed">{t("history.empty")}</div>
       ) : (
         <div className="history-list">
           {audios.map((audio, index) => {
@@ -131,16 +132,19 @@ export default function HistorySection({ audios, onAudiosChanged }) {
                 <div className="history-meta-row">
                   <div className="history-meta">
                     <strong>
-                      {audio.voice_name ? voiceDisplayName(audio.voice_name) : "Voice terhapus"}
+                      {audio.voice_name
+                        ? t("common.voiceName", { name: audio.voice_name })
+                        : t("history.deletedVoice")}
                     </strong>
                     <span className="muted">
                       {" "}
-                      · {formatHistoryDate(audio.created_at)} · {audio.character_count} karakter
+                      · {formatHistoryDate(audio.created_at, locale)} ·{" "}
+                      {t("history.chars", { count: audio.character_count })}
                     </span>
                   </div>
                   <div className="history-actions">
                     <a className="mini-btn download" href={audio.download_url}>
-                      Download
+                      {t("common.download")}
                     </a>
                     <button
                       type="button"
@@ -148,7 +152,7 @@ export default function HistorySection({ audios, onAudiosChanged }) {
                       disabled={deletingId === audio.id}
                       onClick={() => handleDelete(audio.id)}
                     >
-                      {deletingId === audio.id ? "Menghapus…" : "Hapus"}
+                      {deletingId === audio.id ? t("common.deleting") : t("common.delete")}
                     </button>
                   </div>
                 </div>
