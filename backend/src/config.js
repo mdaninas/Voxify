@@ -8,7 +8,8 @@ const rootDir = process.cwd();
 
 const config = {
   appEnv: process.env.APP_ENV || "development",
-  port: Number(process.env.APP_PORT || 8000),
+  port: Number(process.env.PORT || process.env.APP_PORT || 8000),
+  staticDir: path.resolve(rootDir, process.env.STATIC_DIR || "public"),
   databasePath: path.resolve(rootDir, process.env.DATABASE_PATH || "./data/app.sqlite"),
   storageDir: path.resolve(rootDir, process.env.STORAGE_DIR || "./storage"),
   maxUploadMb: Number(process.env.MAX_UPLOAD_MB || 25),

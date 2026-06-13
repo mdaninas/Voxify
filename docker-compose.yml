@@ -1,0 +1,25 @@
+services:
+  voxify:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: voxify:latest
+    container_name: voxify
+    ports:
+      - "8080:8080"
+    env_file:
+      - backend/.env
+    environment:
+      - PORT=8080
+      - APP_ENV=production
+      - STATIC_DIR=/app/public
+      - DATABASE_PATH=/app/data/app.sqlite
+      - STORAGE_DIR=/app/storage
+    volumes:
+      - voxify-data:/app/data
+      - voxify-storage:/app/storage
+    restart: unless-stopped
+
+volumes:
+  voxify-data:
+  voxify-storage:

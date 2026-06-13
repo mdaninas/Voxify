@@ -108,6 +108,37 @@ npm test
 npm run build
 ```
 
+## Menjalankan dengan Docker
+
+Project ini punya satu `Dockerfile` (multi-stage): frontend di-build dengan Vite lalu disajikan oleh backend bersama API dalam satu container (same-origin, tanpa proxy). Data SQLite dan file audio disimpan di volume agar tidak hilang saat container restart.
+
+### Cara tercepat: Docker Compose
+
+```bash
+# Siapkan dulu backend/.env (salin dari backend/.env.example)
+docker compose up --build
+```
+
+Aplikasi jalan di `http://localhost:8080`. Volume `voxify-data` dan `voxify-storage` menyimpan database dan audio.
+
+### Manual (docker build + run)
+
+```bash
+docker build -t voxify:latest .
+docker run -d --name voxify -p 8080:8080 \
+  --env-file backend/.env \
+  -v voxify-data:/app/data \
+  -v voxify-storage:/app/storage \
+  voxify:latest
+```
+
+Catatan:
+
+- Container mendengarkan `PORT` (default `8080`); platform seperti Cloud Run/Railway menyuntikkan `PORT` otomatis.
+- **Persistensi wajib**: tanpa volume `/app/data` dan `/app/storage`, voice clone, audio, dan login akan hilang setiap container dibuat ulang.
+- Untuk login Google di production, isi `GOOGLE_CLIENT_ID`, `SESSION_SECRET`, dan tambahkan domain publik ke Authorized JavaScript origins di Google Cloud Console.
+- Di belakang reverse proxy (Railway/Render/Nginx), set `TRUST_PROXY=1`. Jika pakai HTTPS, set `COOKIE_SECURE=true`.
+
 ## Environment Variables
 
 Semua konfigurasi backend ada di `backend/.env` (salin dari `.env.example`):
@@ -115,7 +146,9 @@ Semua konfigurasi backend ada di `backend/.env` (salin dari `.env.example`):
 | Variable | Default | Keterangan |
 |---|---|---|
 | `APP_ENV` | `development` | Mode environment |
-| `APP_PORT` | `8000` | Port backend |
+| `PORT` | (kosong) | Port yang didengarkan; diutamakan di atas `APP_PORT` (dipakai Cloud Run/Railway) |
+| `APP_PORT` | `8000` | Port backend bila `PORT` kosong |
+| `STATIC_DIR` | `public` | Folder build frontend yang disajikan backend (diisi otomatis di Docker) |
 | `DATABASE_PATH` | `./data/app.sqlite` | Lokasi file SQLite |
 | `STORAGE_DIR` | `./storage` | Folder penyimpanan audio |
 | `MAX_UPLOAD_MB` | `25` | Batas ukuran file sampel |

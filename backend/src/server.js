@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import fs from "node:fs";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import config, { ensureDirectories, isAuthEnabled } from "./config.js";
 import { getDb } from "./database/db.js";
@@ -19,11 +21,7 @@ function buildCorsOptions() {
   return {
     credentials: true,
     origin(origin, callback) {
-      if (!origin || config.corsOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new AppError("CORS_NOT_ALLOWED", "Origin tidak diizinkan.", 403));
+      callback(null, !origin || config.corsOrigins.includes(origin));
     }
   };
 }
@@ -62,7 +60,7 @@ export function createApp() {
     );
   }
 
-  app.use(helmet({ crossOriginResourcePolicy: false }));
+  app.use(helmet({ crossOriginResourcePolicy: false, contentSecurityPolicy: false }));
   app.use(cors(buildCorsOptions()));
   app.use(express.json({ limit: config.jsonBodyLimit }));
   app.use(
@@ -82,9 +80,21 @@ export function createApp() {
   app.use("/api/speech", requireAuth, speechRouter);
   app.use("/api/audios", requireAuth, audiosRouter);
 
-  app.use((req, res) => {
+  app.use("/api", (req, res) => {
     errorResponse(res, new AppError("VALIDATION_ERROR", "Endpoint tidak ditemukan.", 404));
   });
+
+  const indexHtml = path.join(config.staticDir, "index.html");
+  if (fs.existsSync(indexHtml)) {
+    app.use(express.static(config.staticDir));
+    app.get(/^(?!\/api\/).*/, (req, res) => {
+      res.sendFile(indexHtml);
+    });
+  } else {
+    app.use((req, res) => {
+      errorResponse(res, new AppError("VALIDATION_ERROR", "Endpoint tidak ditemukan.", 404));
+    });
+  }
 
   app.use((err, req, res, next) => {
     if (err?.type === "entity.too.large") {
