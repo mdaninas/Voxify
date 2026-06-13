@@ -8,6 +8,7 @@ export function getDb() {
   if (!db) {
     db = new DatabaseSync(config.databasePath);
     db.exec("PRAGMA journal_mode = WAL");
+    db.exec("PRAGMA foreign_keys = ON");
     runMigrations(db, (migration) => {
       console.log(`Database migration diterapkan: v${migration.version} ${migration.name}`);
     });

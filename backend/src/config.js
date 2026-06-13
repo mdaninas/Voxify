@@ -34,6 +34,12 @@ const config = {
   googleClientId: (process.env.GOOGLE_CLIENT_ID || "").trim(),
   sessionSecret: (process.env.SESSION_SECRET || "").trim(),
   sessionTtlHours: Number(process.env.SESSION_TTL_HOURS || 168),
+  trustProxy: Number(process.env.TRUST_PROXY || 0),
+  cookieSameSite: (process.env.COOKIE_SAMESITE || "lax").trim().toLowerCase(),
+  cookieSecure:
+    String(
+      process.env.COOKIE_SECURE || (process.env.APP_ENV === "production" ? "true" : "false")
+    ).toLowerCase() === "true",
   demoMode: String(process.env.DEMO_MODE || "false").toLowerCase() === "true"
 };
 

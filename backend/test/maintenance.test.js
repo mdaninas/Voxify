@@ -135,9 +135,9 @@ test("storage cap menghapus output lalu preview, tidak pernah sampel", async () 
 });
 
 test("backup database dibuat sekali per hari", async () => {
-  const created = maintenance.backupDatabase();
+  const created = await maintenance.backupDatabase();
   assert.equal(created, true);
-  const repeat = maintenance.backupDatabase();
+  const repeat = await maintenance.backupDatabase();
   assert.equal(repeat, false);
   const backups = await fs.readdir(config.backupsDir);
   assert.equal(backups.filter((name) => name.endsWith(".sqlite")).length, 1);

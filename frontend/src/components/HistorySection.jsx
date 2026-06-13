@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { deleteAudio } from "../utils/api.js";
+import { deleteAudio, apiUrl, createMediaAudio } from "../utils/api.js";
+import { playExclusive, releaseAudio } from "../utils/audioBus.js";
 import { useI18n } from "../utils/i18n.jsx";
 
 const FILL_COLORS = ["#f4458e", "#5b3df5", "#ffb43a", "#00a87e"];
@@ -52,8 +53,11 @@ export default function HistorySection({ audios, onAudiosChanged }) {
   }, []);
 
   function stopPlayback() {
-    audioRef.current?.pause();
-    audioRef.current = null;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      releaseAudio(audioRef.current);
+      audioRef.current = null;
+    }
     setPlayingId("");
     setProgress(0);
     setElapsed(0);
@@ -64,8 +68,7 @@ export default function HistorySection({ audios, onAudiosChanged }) {
       stopPlayback();
       return;
     }
-    audioRef.current?.pause();
-    const audio = new Audio(item.audio_url);
+    const audio = createMediaAudio(item.audio_url);
     audio.onloadedmetadata = () => {
       setDurations((prev) => ({ ...prev, [item.id]: audio.duration }));
     };
@@ -82,7 +85,12 @@ export default function HistorySection({ audios, onAudiosChanged }) {
     setPlayingId(item.id);
     setProgress(0);
     setElapsed(0);
-    audio.play().catch(() => stopPlayback());
+    playExclusive(audio, () => {
+      audioRef.current = null;
+      setPlayingId("");
+      setProgress(0);
+      setElapsed(0);
+    }).catch(() => stopPlayback());
   }
 
   async function handleDelete(audioId) {
@@ -143,7 +151,7 @@ export default function HistorySection({ audios, onAudiosChanged }) {
                     </span>
                   </div>
                   <div className="history-actions">
-                    <a className="mini-btn download" href={audio.download_url}>
+                    <a className="mini-btn download" href={apiUrl(audio.download_url)}>
                       {t("common.download")}
                     </a>
                     <button

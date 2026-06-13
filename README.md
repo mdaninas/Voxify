@@ -129,6 +129,9 @@ Semua konfigurasi backend ada di `backend/.env` (salin dari `.env.example`):
 | `GOOGLE_CLIENT_ID` | (kosong) | OAuth Client ID Google; kosongkan untuk menonaktifkan login |
 | `SESSION_SECRET` | (kosong) | Secret penandatangan session cookie; isi string acak panjang |
 | `SESSION_TTL_HOURS` | `168` | Masa berlaku session login dalam jam |
+| `TRUST_PROXY` | `0` | Jumlah hop reverse proxy yang dipercaya; set `1` saat di belakang Railway/Render/Nginx agar rate-limit memakai IP user asli |
+| `COOKIE_SAMESITE` | `lax` | SameSite cookie session; set `none` jika frontend dan backend beda domain |
+| `COOKIE_SECURE` | `false` (`true` di production) | Kirim cookie hanya lewat HTTPS; otomatis `true` saat `COOKIE_SAMESITE=none` |
 | `ELEVENLABS_API_KEY` | (kosong) | API key ElevenLabs, wajib untuk Live Mode |
 | `ELEVENLABS_TTS_MODEL` | `eleven_multilingual_v2` | Model TTS (mendukung Bahasa Indonesia) |
 | `ELEVENLABS_OUTPUT_FORMAT` | `mp3_44100_128` | Format output ElevenLabs |
@@ -142,6 +145,20 @@ Semua konfigurasi backend ada di `backend/.env` (salin dari `.env.example`):
 
 Jangan commit file `.env`. Hanya `.env.example` yang masuk repository.
 
+### Frontend (Vite)
+
+| Variable | Default | Keterangan |
+|---|---|---|
+| `VITE_API_BASE_URL` | (kosong) | URL absolut backend saat di-deploy terpisah dari frontend (mis. `https://api.contoh.com`). Kosongkan untuk dev (memakai proxy Vite same-origin). |
+
+### Catatan deploy beda domain
+
+Jika frontend dan backend di-deploy ke domain berbeda:
+
+1. Backend: set `CORS_ORIGIN` ke domain frontend, `COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`, dan `TRUST_PROXY=1`.
+2. Frontend: set `VITE_API_BASE_URL` ke domain backend. Semua request memakai `credentials: "include"` dan elemen audio memakai `crossOrigin="use-credentials"` secara otomatis.
+3. Backend membaca cookie session httpOnly + CORS dengan `credentials: true`, jadi login Google tetap jalan lintas domain.
+
 ### Pemeliharaan Storage & Backup
 
 Backend menjalankan pemeliharaan otomatis saat startup dan setiap `MAINTENANCE_INTERVAL_HOURS`:
@@ -149,7 +166,9 @@ Backend menjalankan pemeliharaan otomatis saat startup dan setiap `MAINTENANCE_I
 1. Menghapus audio hasil generate yang melewati `STORAGE_RETENTION_DAYS`.
 2. Menghapus audio tertua jika total storage melebihi `MAX_STORAGE_MB`; jika masih lewat batas, file preview tertua ikut dihapus (sampel suara tidak pernah dihapus otomatis, hanya dicatat sebagai peringatan).
 3. Membersihkan file orphan (file di storage yang tidak tercatat di database) dan file temp lama.
-4. Membuat backup harian SQLite via `VACUUM INTO` ke `data/backups`, menyimpan `BACKUP_KEEP` terakhir.
+4. Membuat backup harian SQLite ke `data/backups` (checkpoint WAL lalu salin file secara asinkron agar tidak memblok event loop), menyimpan `BACKUP_KEEP` terakhir.
+
+Database mengaktifkan `PRAGMA foreign_keys = ON`. Catatan: `node:sqlite` masih ditandai experimental oleh Node sehingga memunculkan satu warning saat startup; ini tidak memengaruhi fungsi.
 
 Skema database dikelola dengan migration versioning (`PRAGMA user_version`) di `backend/src/database/migrations.js`.
 

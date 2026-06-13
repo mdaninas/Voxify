@@ -144,14 +144,14 @@ export function cleanupOrphanFiles() {
   return removed;
 }
 
-export function backupDatabase() {
+export async function backupDatabase() {
   const today = new Date().toISOString().slice(0, 10);
   const target = path.join(config.backupsDir, `app-${today}.sqlite`);
   if (fs.existsSync(target)) {
     return false;
   }
-  const escapedTarget = target.replaceAll("'", "''");
-  getDb().exec(`VACUUM INTO '${escapedTarget}'`);
+  getDb().exec("PRAGMA wal_checkpoint(TRUNCATE)");
+  await fs.promises.copyFile(config.databasePath, target);
 
   const backups = listFiles(config.backupsDir)
     .filter((file) => /^app-\d{4}-\d{2}-\d{2}\.sqlite$/.test(file.name))
@@ -162,7 +162,7 @@ export function backupDatabase() {
   return true;
 }
 
-export function runStorageMaintenance() {
+export async function runStorageMaintenance() {
   const summary = {};
   try {
     summary.retentionRemoved = applyRetention();
@@ -180,7 +180,7 @@ export function runStorageMaintenance() {
     summary.orphanError = err.message;
   }
   try {
-    summary.backupCreated = backupDatabase();
+    summary.backupCreated = await backupDatabase();
   } catch (err) {
     summary.backupError = err.message;
   }
@@ -189,9 +189,11 @@ export function runStorageMaintenance() {
 }
 
 export function startMaintenanceSchedule() {
-  runStorageMaintenance();
+  runStorageMaintenance().catch(() => {});
   const intervalMs = Math.max(1, config.maintenanceIntervalHours) * 60 * 60 * 1000;
-  const interval = setInterval(runStorageMaintenance, intervalMs);
+  const interval = setInterval(() => {
+    runStorageMaintenance().catch(() => {});
+  }, intervalMs);
   interval.unref();
   return interval;
 }

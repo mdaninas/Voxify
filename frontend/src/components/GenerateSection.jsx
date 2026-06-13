@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { generateSpeech } from "../utils/api.js";
+import { generateSpeech, apiUrl, createMediaAudio } from "../utils/api.js";
+import { playExclusive, releaseAudio } from "../utils/audioBus.js";
 import { useI18n } from "../utils/i18n.jsx";
 
 const DEFAULT_MAX_TEXT_LENGTH = 1000;
@@ -51,8 +52,11 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
   const canGenerate = Boolean(selectedVoice) && text.trim().length > 0 && !generating;
 
   function resetPlayer() {
-    audioRef.current?.pause();
-    audioRef.current = null;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      releaseAudio(audioRef.current);
+      audioRef.current = null;
+    }
     setPlaying(false);
     setProgress(0);
     setElapsed(0);
@@ -80,29 +84,32 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
     if (!result) return;
     if (playing) {
       audioRef.current?.pause();
+      releaseAudio(audioRef.current);
       setPlaying(false);
       return;
     }
     if (!audioRef.current) {
-      const audio = new Audio(result.audio_url);
+      const audio = createMediaAudio(result.audio_url);
       audio.onloadedmetadata = () => setDuration(audio.duration);
       audio.ontimeupdate = () => {
         setElapsed(audio.currentTime);
         setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
       };
       audio.onended = () => {
+        releaseAudio(audio);
         setPlaying(false);
         setProgress(0);
         setElapsed(0);
       };
       audio.onerror = () => {
+        releaseAudio(audio);
         setPlaying(false);
         setError(t("generate.errAudioLoad"));
       };
       audioRef.current = audio;
     }
     setPlaying(true);
-    audioRef.current.play().catch(() => setPlaying(false));
+    playExclusive(audioRef.current, () => setPlaying(false)).catch(() => setPlaying(false));
   }
 
   const coloredBars = playing ? Math.max(1, Math.round(progress * WAVE_HEIGHTS.length)) : 0;
@@ -214,7 +221,7 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
               <div className="latest-quote">
                 "{result.text.length > 70 ? result.text.slice(0, 70) + "…" : result.text}"
               </div>
-              <a className="download-btn" href={result.download_url}>
+              <a className="download-btn" href={apiUrl(result.download_url)}>
                 {t("common.download")} {String(result.output_format || "mp3").toUpperCase()}
               </a>
             </div>

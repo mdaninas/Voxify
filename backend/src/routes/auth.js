@@ -107,7 +107,8 @@ router.post("/google", async (req, res) => {
     const token = createSessionToken(user.id);
     res.cookie(SESSION_COOKIE, token, {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: config.cookieSameSite,
+      secure: config.cookieSecure || config.cookieSameSite === "none",
       path: "/",
       maxAge: config.sessionTtlHours * 60 * 60 * 1000
     });
@@ -120,7 +121,11 @@ router.post("/google", async (req, res) => {
 });
 
 router.post("/logout", (req, res) => {
-  res.clearCookie(SESSION_COOKIE, { path: "/" });
+  res.clearCookie(SESSION_COOKIE, {
+    path: "/",
+    sameSite: config.cookieSameSite,
+    secure: config.cookieSecure || config.cookieSameSite === "none"
+  });
   res.json({ success: true, data: { logged_out: true } });
 });
 

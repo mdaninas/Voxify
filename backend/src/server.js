@@ -3,7 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { pathToFileURL } from "node:url";
-import config, { ensureDirectories } from "./config.js";
+import config, { ensureDirectories, isAuthEnabled } from "./config.js";
 import { getDb } from "./database/db.js";
 import { errorResponse, AppError } from "./utils/errors.js";
 import healthRouter from "./routes/health.js";
@@ -17,6 +17,7 @@ import { startMaintenanceSchedule } from "./utils/storageMaintenance.js";
 
 function buildCorsOptions() {
   return {
+    credentials: true,
     origin(origin, callback) {
       if (!origin || config.corsOrigins.includes(origin)) {
         callback(null, true);
@@ -27,12 +28,13 @@ function buildCorsOptions() {
   };
 }
 
-function createRateLimit(max, message) {
+function createRateLimit(max, message, { postOnly = false } = {}) {
   return rateLimit({
     windowMs: config.rateLimitWindowMs,
     max,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: postOnly ? (req) => req.method !== "POST" : undefined,
     message: {
       success: false,
       error: {
@@ -50,6 +52,16 @@ export function createApp() {
 
   const app = express();
 
+  if (config.trustProxy > 0) {
+    app.set("trust proxy", config.trustProxy);
+  }
+
+  if (isAuthEnabled() && !config.sessionSecret) {
+    console.warn(
+      "[WARN] Login Google aktif tetapi SESSION_SECRET kosong. Semua user akan ter-logout setiap server restart. Isi SESSION_SECRET di .env untuk produksi."
+    );
+  }
+
   app.use(helmet({ crossOriginResourcePolicy: false }));
   app.use(cors(buildCorsOptions()));
   app.use(express.json({ limit: config.jsonBodyLimit }));
@@ -59,7 +71,9 @@ export function createApp() {
   );
   app.use(
     ["/api/voices", "/api/speech/generate"],
-    createRateLimit(config.generationRateLimitMax, "Terlalu banyak proses audio. Coba lagi nanti.")
+    createRateLimit(config.generationRateLimitMax, "Terlalu banyak proses audio. Coba lagi nanti.", {
+      postOnly: true
+    })
   );
 
   app.use("/api/health", healthRouter);

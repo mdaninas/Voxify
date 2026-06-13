@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import VoiceRecorder from "./VoiceRecorder.jsx";
-import { createVoice, deleteVoice } from "../utils/api.js";
+import { createVoice, deleteVoice, createMediaAudio } from "../utils/api.js";
+import { playExclusive, releaseAudio } from "../utils/audioBus.js";
 import { useI18n } from "../utils/i18n.jsx";
 
 const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".m4a", ".webm"];
@@ -119,8 +120,11 @@ export default function CreateVoiceSection({
   }
 
   function stopPreview() {
-    previewAudioRef.current?.pause();
-    previewAudioRef.current = null;
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      releaseAudio(previewAudioRef.current);
+      previewAudioRef.current = null;
+    }
     setPlayingVoiceId("");
   }
 
@@ -129,16 +133,22 @@ export default function CreateVoiceSection({
       stopPreview();
       return;
     }
-    previewAudioRef.current?.pause();
-    const audio = new Audio(voice.preview_url);
-    audio.onended = () => setPlayingVoiceId("");
+    const audio = createMediaAudio(voice.preview_url);
+    audio.onended = () => {
+      releaseAudio(audio);
+      setPlayingVoiceId("");
+    };
     audio.onerror = () => {
+      releaseAudio(audio);
       setPlayingVoiceId("");
       setError(t("create.errPreviewLoad"));
     };
     previewAudioRef.current = audio;
     setPlayingVoiceId(voice.id);
-    audio.play().catch(() => setPlayingVoiceId(""));
+    playExclusive(audio, () => {
+      previewAudioRef.current = null;
+      setPlayingVoiceId("");
+    }).catch(() => setPlayingVoiceId(""));
   }
 
   async function handleDeleteVoice(voiceId, name) {
