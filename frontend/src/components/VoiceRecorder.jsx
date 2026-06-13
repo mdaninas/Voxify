@@ -145,6 +145,10 @@ export default function VoiceRecorder({ recordedBlob, onRecorded, minSeconds = D
 
   return (
     <div className="record-panel">
+      <div className="script-cue">
+        <span className="script-cue-badge">{t("recorder.scriptBadge")}</span>
+        <span>{t("recorder.scriptLabel")}</span>
+      </div>
       <div className="script-quote">{t("recorder.script")}</div>
       <button
         type="button"

@@ -294,8 +294,9 @@ export default function CreateVoiceSection({
                   disabled={!voice.preview_url}
                   onClick={() => togglePreview(voice)}
                   title={voice.preview_url ? t("create.playSample") : t("create.noPreview")}
+                  aria-label={voice.preview_url ? t("create.playSample") : t("create.noPreview")}
                 >
-                  {playing ? "❚❚" : voice.name.charAt(0).toUpperCase()}
+                  {playing ? "■" : "▶"}
                 </button>
                 <div className="voice-info">
                   <div className="voice-name">{t("common.voiceName", { name: voice.name })}</div>

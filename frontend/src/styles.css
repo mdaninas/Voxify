@@ -1308,17 +1308,41 @@ select:focus {
   text-wrap: pretty;
 }
 
+.script-cue {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+}
+
+.script-cue-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
 .script-quote {
   width: 100%;
-  border: 2px dashed #b9b1d1;
+  border: 2px solid var(--ink);
   background: var(--bg-input);
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 14px 16px;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--text-secondary);
+  color: var(--ink);
   white-space: pre-wrap;
   text-align: left;
+  box-shadow: 3px 3px 0 var(--pastel-yellow);
 }
 
 .dropzone {
@@ -1594,18 +1618,25 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
-  font-family: "Bricolage Grotesque", sans-serif;
-  font-weight: 800;
-  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  font-family: "Schibsted Grotesk", sans-serif;
+  padding: 0 0 0 2px;
+  transition: transform 0.12s ease;
+}
+
+.avatar-btn:hover:not(:disabled) {
+  transform: scale(1.06);
 }
 
 .avatar-btn.playing {
-  font-size: 12px;
+  font-size: 13px;
+  padding: 0;
 }
 
 .avatar-btn:disabled {
   cursor: default;
+  opacity: 0.55;
 }
 
 .voice-info {
@@ -1669,6 +1700,49 @@ select:focus {
 .gen-hint {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.template-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.template-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.template-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.template-chip {
+  font-family: "Schibsted Grotesk", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.template-chip:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--cream);
+  transform: translateY(-1px);
+}
+
+.template-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .gen-status {

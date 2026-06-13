@@ -16,7 +16,7 @@ function formatTime(totalSeconds) {
 }
 
 export default function GenerateSection({ voices, maxTextLength, onGenerated }) {
-  const { t } = useI18n();
+  const { t, tRaw } = useI18n();
   const textLimit = maxTextLength || DEFAULT_MAX_TEXT_LENGTH;
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
   const [text, setText] = useState("");
@@ -154,6 +154,22 @@ export default function GenerateSection({ voices, maxTextLength, onGenerated }) 
           <label className="field-label" htmlFor="speech-text">
             {t("generate.textLabel")}
           </label>
+          <div className="template-row">
+            <span className="template-label">{t("generate.templatesLabel")}</span>
+            <div className="template-chips">
+              {(tRaw("generate.templates") || []).map((tpl) => (
+                <button
+                  key={tpl.label}
+                  type="button"
+                  className="template-chip"
+                  disabled={!hasVoices}
+                  onClick={() => setText(tpl.text.slice(0, textLimit))}
+                >
+                  {tpl.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <textarea
             id="speech-text"
             className="textarea-input"

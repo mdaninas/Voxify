@@ -122,7 +122,26 @@ export const translations = {
       submitting: "Menghasilkan…",
       processing: "Memproses teks menjadi suara dengan {name}…",
       latest: "Hasil terakhir · {name}",
-      errAudioLoad: "File audio gagal dimuat. Coba generate ulang."
+      errAudioLoad: "File audio gagal dimuat. Coba generate ulang.",
+      templatesLabel: "Template teks (klik untuk mengisi)",
+      templates: [
+        {
+          label: "Sapaan",
+          text: "Halo semuanya, selamat datang kembali di channel saya. Senang sekali bisa menyapa kalian hari ini."
+        },
+        {
+          label: "Promosi produk",
+          text: "Spesial hari ini, dapatkan produk pilihan kami dengan harga terbaik. Stok terbatas, jangan sampai kehabisan ya!"
+        },
+        {
+          label: "Narasi",
+          text: "Di sebuah desa kecil yang tenang, hiduplah seseorang yang bermimpi besar dan tidak pernah berhenti berusaha."
+        },
+        {
+          label: "Pengumuman",
+          text: "Pemberitahuan penting untuk semua pendengar. Acara akan dimulai sepuluh menit lagi. Mohon segera bersiap di tempat masing-masing."
+        }
+      ]
     },
     history: {
       stepTitle: "History audio",
@@ -134,6 +153,8 @@ export const translations = {
       errAudioLoad: "File audio gagal dimuat."
     },
     recorder: {
+      scriptBadge: "BACA INI",
+      scriptLabel: "Baca teks berikut dengan jelas sambil merekam:",
       script:
         "Saya menyatakan bahwa ini suara saya sendiri dan saya mengizinkan aplikasi ini membuat versi sintetis dari suara saya.\n\nHalo, saya sedang merekam suara untuk membuat profil suara pribadi. Saya berbicara dengan jelas, santai, dan alami. Satu, dua, tiga, mari kita mulai.",
       recording: "Merekam… klik untuk berhenti",
@@ -264,7 +285,26 @@ export const translations = {
       submitting: "Generating…",
       processing: "Turning text into speech with {name}…",
       latest: "Latest result · {name}",
-      errAudioLoad: "Failed to load audio. Try generating again."
+      errAudioLoad: "Failed to load audio. Try generating again.",
+      templatesLabel: "Text templates (click to fill)",
+      templates: [
+        {
+          label: "Greeting",
+          text: "Hello everyone, welcome back to my channel. I'm really happy to see you all here today."
+        },
+        {
+          label: "Product promo",
+          text: "Today only, grab our featured product at the best price. Limited stock, so don't miss out!"
+        },
+        {
+          label: "Narration",
+          text: "In a small, quiet village, there lived someone with a big dream who never stopped trying."
+        },
+        {
+          label: "Announcement",
+          text: "An important notice for all listeners. The event will begin in ten minutes. Please get ready at your places."
+        }
+      ]
     },
     history: {
       stepTitle: "Audio history",
@@ -276,6 +316,8 @@ export const translations = {
       errAudioLoad: "Failed to load audio."
     },
     recorder: {
+      scriptBadge: "READ THIS",
+      scriptLabel: "Read the following text clearly while recording:",
       script:
         "I confirm that this is my own voice and I allow this app to create a synthetic version of my voice.\n\nHello, I am recording my voice to create a personal voice profile. I speak clearly, calmly, and naturally. One, two, three, let's begin.",
       recording: "Recording… click to stop",
