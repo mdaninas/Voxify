@@ -60,7 +60,13 @@ export function createApp() {
     );
   }
 
-  app.use(helmet({ crossOriginResourcePolicy: false, contentSecurityPolicy: false }));
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: false,
+      contentSecurityPolicy: false,
+      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+    })
+  );
   app.use(cors(buildCorsOptions()));
   app.use(express.json({ limit: config.jsonBodyLimit }));
   app.use(
